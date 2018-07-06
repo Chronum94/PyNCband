@@ -29,3 +29,6 @@ class CoreShellParticle:
             self.cmat.cbe < self.smat.cbe
         )
         return core_higher or shell_higher, core_higher, shell_higher
+
+    def calculate_electron_wavevectors(self):
+        raise NotImplementedError
