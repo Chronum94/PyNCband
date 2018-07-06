@@ -13,3 +13,6 @@ class CoreShellParticle:
         self.smat = shell_material
         self.core_width = core_thickness
         self.shell_width = shell_thickness
+
+    def is_type_one(self):
+        return False
