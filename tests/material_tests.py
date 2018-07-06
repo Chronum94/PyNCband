@@ -15,3 +15,7 @@ if __name__ == "__main__":
     assert CdS_AlSb.eh, "CdS/AlSb should be e-h core-shell."
     assert AlSb_CdS.type_two, "AlSb/CdS is is a type 2 QD"
     assert AlSb_CdS.he, "AlSb/CdS should be h-e core-shell."
+    assert CdS_AlSb.ue < 0
+    assert CdS_AlSb.uh < 0
+    print(CdS_AlSb.ue)
+    print(CdS_AlSb.calculate_electron_wavevectors(0 ))
