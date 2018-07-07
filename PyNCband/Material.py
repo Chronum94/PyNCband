@@ -1,6 +1,8 @@
 """This file contains a simple material class, containing only the properties of the material that we need."""
 
 
+__all__ = ['Material']
+
 class Material:
     def __init__(
         self,
@@ -21,13 +23,13 @@ class Material:
         self.m_e = electron_eff_mass
         self.m_h = hole_eff_mass
         self.eps = epsilon
-        if name != None:
+        if name is not None:
             self.name = name
         else:
             self.name = None
 
     def __str__(self):
-        if self.name != None:
+        if self.name is not None:
             return self.name
         else:
             return self.__repr__()

@@ -9,13 +9,16 @@ if __name__ == "__main__":
     test.assert_almost_equal(AlSb.vbe, -4.5)
     test.assert_almost_equal(CdS.vbe, -5.9)
 
-    CdS_AlSb = CoreShellParticle(CdS, AlSb, 5, 5)
-    AlSb_CdS = CoreShellParticle(AlSb, CdS, 5, 5)
+    CdS_AlSb = CoreShellParticle(CdS, AlSb, 5, 3)
+    AlSb_CdS = CoreShellParticle(AlSb, CdS, 5, 3)
     assert CdS_AlSb.type_two, "CdS/AlSb is is a type 2 QD"
     assert CdS_AlSb.eh, "CdS/AlSb should be e-h core-shell."
     assert AlSb_CdS.type_two, "AlSb/CdS is is a type 2 QD"
     assert AlSb_CdS.he, "AlSb/CdS should be h-e core-shell."
-    assert CdS_AlSb.ue < 0
-    assert CdS_AlSb.uh < 0
     print(CdS_AlSb.ue)
-    print(CdS_AlSb.calculate_electron_wavevectors(0 ))
+    print(CdS_AlSb.calculate_electron_wavevectors(CdS_AlSb.ue + 1e-13))
+    print(CdS_AlSb.calculate_s1_electron_energy())
+    s1_e_CdS_AlSb = CdS_AlSb.calculate_s1_electron_energy()
+    print('S1 energy:', s1_e_CdS_AlSb)
+    ke, qe = CdS_AlSb.calculate_electron_wavevectors(s1_e_CdS_AlSb)
+    print('Electron wavevector in core and shell:', ke, qe)
