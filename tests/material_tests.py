@@ -1,4 +1,6 @@
 import numpy.testing as test
+import numpy as np
+import matplotlib.pyplot as plt
 
 from PyNCband.Material import Material
 from PyNCband.CoreShellParticle import CoreShellParticle
@@ -16,9 +18,21 @@ if __name__ == "__main__":
     assert AlSb_CdS.type_two, "AlSb/CdS is is a type 2 QD"
     assert AlSb_CdS.he, "AlSb/CdS should be h-e core-shell."
     print(CdS_AlSb.ue)
-    print(CdS_AlSb.calculate_electron_wavevectors(CdS_AlSb.ue + 1e-13))
-    print(CdS_AlSb.calculate_s1_electron_energy())
-    s1_e_CdS_AlSb = CdS_AlSb.calculate_s1_electron_energy()
-    print('S1 energy:', s1_e_CdS_AlSb)
-    ke, qe = CdS_AlSb.calculate_electron_wavevectors(s1_e_CdS_AlSb)
-    print('Electron wavevector in core and shell:', ke, qe)
+    print(CdS_AlSb.calculate_electron_wavevectors())
+    # print(CdS_AlSb.calculate_s1_energies())
+    # s1_e_CdS_AlSb, s1_h_CdS_AlSb = CdS_AlSb.calculate_s1_energies()
+    # print("S1 energy:", s1_e_CdS_AlSb)
+    # ke, qe = CdS_AlSb.calculate_electron_wavevectors()
+    # print("Electron wavevector in core and shell:", ke, qe)
+
+    """ x, dx = np.linspace(1e-14, 10, 1000, retstep=True)
+    wf =  CdS_AlSb.plot_electron_wavefunction(x, ke, qe)
+    plt.plot(x, wf * wf)
+    plt.show()
+    print(CdS_AlSb.cmat.m_e, CdS_AlSb.smat.m_e)
+    cme, sme = CdS_AlSb.cmat.m_e, CdS_AlSb.smat.m_e
+    plt.plot(x, np.gradient(wf, dx) * np.where(x < CdS_AlSb.core_width, 1, 4))
+    # plt.xlim(4.8, 5.2)
+    plt.show() """
+
+    CdS_AlSb.plot_potential_profile()

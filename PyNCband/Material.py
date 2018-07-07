@@ -1,7 +1,8 @@
 """This file contains a simple material class, containing only the properties of the material that we need."""
 
 
-__all__ = ['Material']
+__all__ = ["Material"]
+
 
 class Material:
     def __init__(
