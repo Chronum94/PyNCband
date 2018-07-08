@@ -16,19 +16,21 @@ class CoreShellParticle:
         self,
         core_material: Material,
         shell_material: Material,
-        core_thickness: float,
-        shell_thickness: float,
+        core_width: float,
+        shell_width: float,
     ):
         self.cmat = core_material
         self.smat = shell_material
-        self.core_width = core_thickness
-        self.shell_width = shell_thickness
-        self.radius = core_thickness + shell_thickness
+        self.core_width = core_width
+        self.shell_width = shell_width
+        self.radius = core_width + shell_width
         self.type_one = self.is_type_one()
-        self.type_two, self.he, self.eh = self.is_type_two()
+        self.type_two, self.h_e, self.e_h = self.is_type_two()
 
         self.ue = np.abs(self.cmat.cbe - self.smat.cbe)
         self.uh = np.abs(self.cmat.vbe - self.smat.vbe)
+
+
 
     # This is likely to get refactored later to return types.
     def is_type_one(self):
@@ -45,23 +47,31 @@ class CoreShellParticle:
         )
         return core_higher or shell_higher, core_higher, shell_higher
 
-    def calculate_electron_wavevectors(self):
+    def calculate_wavevectors(self):
         """Returns a tuple of the electron wavevectors in the core and the shell."""
         energy_e, energy_h = self.calculate_s1_energies()
         result = None
-        if self.eh:
+        if self.e_h:
             result = (
                 wavevector_from_energy(energy_e, self.cmat.m_e),
                 wavevector_from_energy(
                     energy_e, self.smat.m_e, potential_offset=self.ue
                 ),
+                wavevector_from_energy(
+                    energy_h, self.cmat.m_h, potential_offset=self.uh
+                ),
+                wavevector_from_energy(energy_h, self.smat.m_h),
             )
-        elif self.he:
+        elif self.h_e:
             result = (
                 wavevector_from_energy(
                     energy_e, self.cmat.m_e, potential_offset=self.ue
                 ),
                 wavevector_from_energy(energy_e, self.smat.m_e),
+                wavevector_from_energy(energy_h, self.cmat.m_h),
+                wavevector_from_energy(
+                    energy_h, self.smat.m_h, potential_offset=self.uh
+                ),
             )
         return result
 
@@ -148,4 +158,10 @@ class CoreShellParticle:
         plt.show()
 
     def analytical_overlap_integral(self):
-        raise NotImplementedError
+        k_e, q_e, k_h, q_h = self.calculate_wavevectors()
+        K_e, Q_e, K_h, Q_h = np.sin(k_e * self.core_width), np.sin(q_e * self.shell_width),\
+                             np.sin(k_h, self.core_width), np.sin(q_h, self.shell_width)
+        R, H = self.core_width, self.shell_width
+        core_integral = ((k_h - k_e) * np.sin(R * (k_h + k_e)) - (k_h + k_e) * np.sin(R * (k_h - k_e))) / (K_e * K_h * 2 * (k_h * k_h - k_e * k_e))
+
+

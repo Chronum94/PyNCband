@@ -14,15 +14,15 @@ if __name__ == "__main__":
     CdS_AlSb = CoreShellParticle(CdS, AlSb, 5, 3)
     AlSb_CdS = CoreShellParticle(AlSb, CdS, 5, 3)
     assert CdS_AlSb.type_two, "CdS/AlSb is is a type 2 QD"
-    assert CdS_AlSb.eh, "CdS/AlSb should be e-h core-shell."
+    assert CdS_AlSb.e_h, "CdS/AlSb should be e-h core-shell."
     assert AlSb_CdS.type_two, "AlSb/CdS is is a type 2 QD"
-    assert AlSb_CdS.he, "AlSb/CdS should be h-e core-shell."
+    assert AlSb_CdS.h_e, "AlSb/CdS should be h-e core-shell."
     print(CdS_AlSb.ue)
-    print(CdS_AlSb.calculate_electron_wavevectors())
+    print(CdS_AlSb.calculate_wavevectors())
     # print(CdS_AlSb.calculate_s1_energies())
     # s1_e_CdS_AlSb, s1_h_CdS_AlSb = CdS_AlSb.calculate_s1_energies()
     # print("S1 energy:", s1_e_CdS_AlSb)
-    # ke, qe = CdS_AlSb.calculate_electron_wavevectors()
+    # ke, qe = CdS_AlSb.calculate_wavevectors()
     # print("Electron wavevector in core and shell:", ke, qe)
 
     """ x, dx = np.linspace(1e-14, 10, 1000, retstep=True)
