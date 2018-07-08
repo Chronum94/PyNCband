@@ -114,6 +114,7 @@ class CoreShellParticle:
     def plot_electron_wavefunction(
         self, x, core_wavevector: float, shell_wavevector: float
     ):
+
         # x = np.linspace(1e-10, self.core_width + self.shell_width, 1000)
         cwf = lambda x: core_wavefunction(x, core_wavevector, self.core_width)
         swf = lambda x: shell_wavefunction(
@@ -132,7 +133,7 @@ class CoreShellParticle:
         return y
 
     def plot_potential_profile(self):
-
+        """Plots one half of the spherically symmetric potential well of the quantum dot."""
         plt.hlines([self.cmat.vbe, self.cmat.cbe], xmin=0, xmax=self.core_width)
         plt.hlines(
             [self.smat.vbe, self.smat.cbe],
