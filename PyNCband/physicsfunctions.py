@@ -4,19 +4,20 @@ from numpy.lib.scimath import sqrt as csqrt
 # from .CoreShellParticle import CoreShellParticle
 
 __all__ = [
-    "core_wavefunction",
-    "shell_wavefunction",
+    "unnormalized_core_wavefunction",
+    "unnormalized_shell_wavefunction",
     "wavevector_from_energy",
     "electron_eigenvalue_residual",
     "hole_eigenvalue_residual",
+    "_x_residual_function"
 ]
 
 
-def core_wavefunction(x, k: float, core_width: float):
+def unnormalized_core_wavefunction(x, k: float, core_width: float):
     return np.sin(k * x) / (x * np.sin(k * core_width))
 
 
-def shell_wavefunction(x, k: float, core_width: float, shell_width: float):
+def unnormalized_shell_wavefunction(x, k: float, core_width: float, shell_width: float):
     return np.sin(k * (core_width + shell_width - x)) / (x * np.sin(k * shell_width))
 
 
@@ -27,7 +28,7 @@ def wavevector_from_energy(energy: float, mass: float, potential_offset: float =
 
 
 def electron_eigenvalue_residual(energy, particle):
-    if particle.eh:
+    if particle.e_h:
         k_e = wavevector_from_energy(energy, particle.cmat.m_e)
         q_e = wavevector_from_energy(
             energy, particle.smat.m_e, potential_offset=particle.ue
@@ -42,7 +43,7 @@ def electron_eigenvalue_residual(energy, particle):
 
 
 def hole_eigenvalue_residual(energy, particle):
-    if particle.eh:
+    if particle.e_h:
         k_h = wavevector_from_energy(
             energy, particle.cmat.m_h, potential_offset=particle.uh
         )
@@ -55,3 +56,11 @@ def hole_eigenvalue_residual(energy, particle):
                 - 1
                 - q_h * particle.core_width / np.tan(q_h * particle.shell_width)
             )
+
+def _x_residual_function(x, mass_in_core: float, mass_in_shell: float):
+        m = mass_in_shell / mass_in_core
+        xsq = x ** 2
+        if - 1e-3 < x < 1e-3:
+            return m - xsq / 3 - xsq ** 2 / 45 - xsq ** 3 / 945 # Somewhat warried about floating point round-off.
+        else:
+            return x / np.tan(x) + m - 1

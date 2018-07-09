@@ -126,8 +126,8 @@ class CoreShellParticle:
     ):
 
         # x = np.linspace(1e-10, self.core_width + self.shell_width, 1000)
-        cwf = lambda x: core_wavefunction(x, core_wavevector, self.core_width)
-        swf = lambda x: shell_wavefunction(
+        cwf = lambda x: unnormalized_core_wavefunction(x, core_wavevector, self.core_width)
+        swf = lambda x: unnormalized_shell_wavefunction(
             x, core_wavevector, self.core_width, self.shell_width
         )
 
@@ -157,11 +157,50 @@ class CoreShellParticle:
         # plt.vlines()
         plt.show()
 
+    # This is current non-normalized.
     def analytical_overlap_integral(self):
         k_e, q_e, k_h, q_h = self.calculate_wavevectors()
         K_e, Q_e, K_h, Q_h = np.sin(k_e * self.core_width), np.sin(q_e * self.shell_width),\
-                             np.sin(k_h, self.core_width), np.sin(q_h, self.shell_width)
+                             np.sin(k_h * self.core_width), np.sin(q_h * self.shell_width)
         R, H = self.core_width, self.shell_width
-        core_integral = ((k_h - k_e) * np.sin(R * (k_h + k_e)) - (k_h + k_e) * np.sin(R * (k_h - k_e))) / (K_e * K_h * 2 * (k_h * k_h - k_e * k_e))
 
+        # The accompanying formula for these are in a Maxima file.
+        core_integral =  - ((k_h - k_e) * np.sin(R * (k_h + k_e)) - (k_h + k_e) * np.sin(R * (k_h - k_e))) / (K_e * K_h * 2 * (k_h * k_h - k_e * k_e))
+        shell_integral = - ((q_h - q_e) * np.sin(H * (q_h + q_e)) - (q_h + q_e) * np.sin(H * (q_h - q_e))) / (Q_e * Q_h * 2 * (q_h * q_h - q_e * q_e))
+
+        return (core_integral + shell_integral) ** 2
+
+    def print_e_wf_at_zero(self):
+        print(unnormalized_core_wavefunction(1e-14, self.calculate_wavevectors()[0], self.core_width))
+
+    def __normalize_wavefunction(self):
+        raise NotImplementedError
+
+    def localization_electron_min_width(self, shell_width: float = None):
+        if shell_width is None:
+            shell_width = self.shell_width
+        """Minimum core width for localization of electron for a given shell width."""
+        m = self.cmat.m_e / self.smat.m_e
+        x1 = brentq(_x_residual_function, 0, np.pi / 1.001, args=(self.cmat.m_e, self.smat.m_e))
+        k1 = (2 * self.cmat.m_e * self.ue) ** 0.5 # No 1/hbar because unitless.
+
+        min_core_loc_from_shell = lambda r: shell_width - m * r / (1 - m + k1 * r / np.tan(k1 * r))
+        result = brentq(min_core_loc_from_shell, x1/k1, np.pi/k1)
+        return result
+
+    def localization_hole_min_radius(self, core_width: float = None):
+        if core_width is None:
+            core_width = self.core_width
+        """Minimum core width for localization of electron for a given shell width."""
+        m = self.cmat.m_e / self.smat.m_e
+        # x1 = brentq(_x_residual_function, 0, np.pi / 1.001, args=(self.cmat.m_e, self.smat.m_e))
+        q1 = (2 * self.smat.m_h * self.uh) ** 0.5 # No 1/hbar because unitless.
+        print(q1)
+        min_shell_loc_from_core = lambda h: core_width + np.tan(q1 * h) * q1
+        # h = np.linspace(np.pi/ (2 * q1) + 0.1, np.pi / q1, 100)
+        # plt.plot(h, min_shell_loc_from_core(h))
+        # plt.show()
+        result = brentq(min_shell_loc_from_core, np.pi / (2 * q1) + 1e-12, np.pi / q1)
+        # print(min_shell_loc_from_core(np.pi / (2 * q1)), min_shell_loc_from_core(np.pi / q1))
+        return result
 

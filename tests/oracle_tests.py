@@ -11,7 +11,7 @@ all_one_core = Material(1, -1, 1, 1, 1, "Ones")
 all_one_shell = Material(1, -0.5, 1, 1, 1, "Ones")
 eff_mass_test = Material(1, 1, 1, 0.5, 1, "HoleMassHalf")
 
-coreshell_1 = CoreShellParticle(all_one_core, all_one_shell, 1, 1)
+coreshell_1 = CoreShellParticle(all_one_core, all_one_shell, 1., 1)
 
 assert coreshell_1.e_h == True
 print("S1 electron and hole energies:\n", coreshell_1.calculate_s1_energies())
@@ -24,3 +24,6 @@ test.assert_allclose(
     s1_wavevectors,
     (1.715268410618755, 1.393608883606369, 1.393608883606369, 1.715268410618755),
 )
+print('Analytical overlap integral:', coreshell_1.analytical_overlap_integral())
+print('Min core for e-loc:', coreshell_1.localization_electron_min_width())
+print('Min shell for h-loc:', coreshell_1.localization_hole_min_radius())
