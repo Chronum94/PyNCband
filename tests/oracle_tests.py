@@ -24,10 +24,17 @@ test.assert_allclose(
     s1_wavevectors,
     (1.715268410618755, 1.393608883606369, 1.393608883606369, 1.715268410618755),
 )
-print('Analytical overlap integral:', coreshell_1.analytical_overlap_integral())
-print('Min core for e-loc:', coreshell_1.localization_electron_min_width())
-print('Min shell for h-loc:', coreshell_1.localization_hole_min_radius())
+print("Analytical overlap integral:", coreshell_1.analytical_overlap_integral())
+print("Numerical overlap integral:", coreshell_1.numerical_overlap_integral())
+print("Min core for e-loc:", coreshell_1.localization_electron_min_width())
+print("Min shell for h-loc:", coreshell_1.localization_hole_min_radius())
 
 # coreshell_1.plot_potential_profile()
-plt.plot(np.abs(coreshell_1.plot_electron_wavefunction(np.linspace(0, 2, 100), 1.715268410618755, 1.393608883606369)))
+plt.plot(
+    np.abs(
+        coreshell_1.plot_electron_wavefunction(
+            np.linspace(0, 3, 100), 1.715268410618755, 1.393608883606369
+        )
+    )
+)
 plt.show()

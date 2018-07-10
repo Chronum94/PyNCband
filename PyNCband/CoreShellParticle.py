@@ -2,6 +2,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.optimize import brentq
+from scipy.integrate import quad, dblquad
 
 from .Material import Material
 from .physicsfunctions import *
@@ -30,7 +31,6 @@ class CoreShellParticle:
 
         self.ue = np.abs(self.cmat.cbe - self.smat.cbe)
         self.uh = np.abs(self.cmat.vbe - self.smat.vbe)
-
 
     # This is likely to get refactored later to return types.
     def is_type_one(self):
@@ -126,19 +126,22 @@ class CoreShellParticle:
     ):
 
         # x = np.linspace(1e-10, self.core_width + self.shell_width, 1000)
-        cwf = lambda x: unnormalized_core_wavefunction(x, core_wavevector, self.core_width)
-        swf = lambda x: unnormalized_shell_wavefunction(
-            x, shell_wavevector, self.core_width, self.shell_width
-        )
-
-        y = np.piecewise(
-            x,
-            [
-                x < self.core_width,
-                x > self.core_width,
-                x > self.core_width + self.shell_width,
-            ],
-            [cwf, swf, 0],
+        # cwf = lambda x: unnormalized_core_wavefunction(x, core_wavevector, self.core_width)
+        # swf = lambda x: unnormalized_shell_wavefunction(
+        #     x, shell_wavevector, self.core_width, self.shell_width
+        # )
+        #
+        # y = np.piecewise(
+        #     x,
+        #     [
+        #         x < self.core_width,
+        #         x > self.core_width,
+        #         x > self.core_width + self.shell_width,
+        #     ],
+        #     [cwf, swf, 0],
+        # )
+        y = wavefunction(
+            x, core_wavevector, shell_wavevector, self.core_width, self.shell_width
         )
         return y
 
@@ -160,20 +163,43 @@ class CoreShellParticle:
     # This is current non-normalized.
     def analytical_overlap_integral(self):
         k_e, q_e, k_h, q_h = self.calculate_wavevectors()
-        K_e, Q_e, K_h, Q_h = np.sin(k_e * self.core_width), np.sin(q_e * self.shell_width),\
-                             np.sin(k_h * self.core_width), np.sin(q_h * self.shell_width)
+        K_e, Q_e, K_h, Q_h = (
+            np.sin(k_e * self.core_width),
+            np.sin(q_e * self.shell_width),
+            np.sin(k_h * self.core_width),
+            np.sin(q_h * self.shell_width),
+        )
         R, H = self.core_width, self.shell_width
 
         # The accompanying formula for these are in a Maxima file.
-        core_integral = - ((k_h - k_e) * np.sin(R * (k_h + k_e)) - (k_h + k_e) * np.sin(R * (k_h - k_e))) / (K_e * K_h
-                                                                                        * 2 * (k_h * k_h - k_e * k_e))
-        shell_integral = - ((q_h - q_e) * np.sin(H * (q_h + q_e)) - (q_h + q_e) * np.sin(H * (q_h - q_e))) / (Q_e * Q_h
-                                                                                        * 2 * (q_h * q_h - q_e * q_e))
+        # QDWavefunctionsAndIntegrals.wxmx
+        core_integral = -(
+            (k_h - k_e) * np.sin(R * (k_h + k_e))
+            - (k_h + k_e) * np.sin(R * (k_h - k_e))
+        ) / (K_e * K_h * 2 * (k_h * k_h - k_e * k_e))
+        shell_integral = -(
+            (q_h - q_e) * np.sin(H * (q_h + q_e))
+            - (q_h + q_e) * np.sin(H * (q_h - q_e))
+        ) / (Q_e * Q_h * 2 * (q_h * q_h - q_e * q_e))
 
-        return (core_integral + shell_integral) ** 2
+        return abs(core_integral + shell_integral) ** 2
+
+    def numerical_overlap_integral(self):
+        k_e, q_e, k_h, q_h = self.calculate_wavevectors()
+
+        ewf = lambda x: wavefunction(x, k_e, q_e, self.core_width, self.shell_width)
+        hwf = lambda x: wavefunction(x, k_h, q_h, self.core_width, self.shell_width)
+        overlap_integrand = lambda x: x * x * ewf(x) * hwf(x)
+
+        overlap_integral = quad(overlap_integrand, 0, self.radius)
+        return abs(overlap_integral[0]) ** 2
 
     def print_e_wf_at_zero(self):
-        print(unnormalized_core_wavefunction(1e-14, self.calculate_wavevectors()[0], self.core_width))
+        print(
+            unnormalized_core_wavefunction(
+                1e-14, self.calculate_wavevectors()[0], self.core_width
+            )
+        )
 
     def __normalize_wavefunction(self):
         raise NotImplementedError
@@ -183,11 +209,15 @@ class CoreShellParticle:
             shell_width = self.shell_width
         """Minimum core width for localization of electron for a given shell width."""
         m = self.cmat.m_e / self.smat.m_e
-        x1 = brentq(_x_residual_function, 0, np.pi / 1.001, args=(self.cmat.m_e, self.smat.m_e))
-        k1 = (2 * self.cmat.m_e * self.ue) ** 0.5 # No 1/hbar because unitless.
+        x1 = brentq(
+            _x_residual_function, 0, np.pi / 1.001, args=(self.cmat.m_e, self.smat.m_e)
+        )
+        k1 = (2 * self.cmat.m_e * self.ue) ** 0.5  # No 1/hbar because unitless.
 
-        min_core_loc_from_shell = lambda r: shell_width - m * r / (1 - m + k1 * r / np.tan(k1 * r))
-        result = brentq(min_core_loc_from_shell, x1/k1, np.pi/k1)
+        min_core_loc_from_shell = lambda r: shell_width - m * r / (
+            1 - m + k1 * r / np.tan(k1 * r)
+        )
+        result = brentq(min_core_loc_from_shell, x1 / k1, np.pi / k1)
         return result
 
     def localization_hole_min_radius(self, core_width: float = None):
@@ -196,7 +226,7 @@ class CoreShellParticle:
         """Minimum core width for localization of electron for a given shell width."""
         m = self.cmat.m_e / self.smat.m_e
         # x1 = brentq(_x_residual_function, 0, np.pi / 1.001, args=(self.cmat.m_e, self.smat.m_e))
-        q1 = (2 * self.smat.m_h * self.uh) ** 0.5 # No 1/hbar because unitless.
+        q1 = (2 * self.smat.m_h * self.uh) ** 0.5  # No 1/hbar because unitless.
         print(q1)
         min_shell_loc_from_core = lambda h: core_width + np.tan(q1 * h) * q1
         # h = np.linspace(np.pi/ (2 * q1) + 0.1, np.pi / q1, 100)
@@ -205,4 +235,3 @@ class CoreShellParticle:
         result = brentq(min_shell_loc_from_core, np.pi / (2 * q1) + 1e-12, np.pi / q1)
         # print(min_shell_loc_from_core(np.pi / (2 * q1)), min_shell_loc_from_core(np.pi / q1))
         return result
-
