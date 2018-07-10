@@ -27,3 +27,5 @@ test.assert_allclose(
 print('Analytical overlap integral:', coreshell_1.analytical_overlap_integral())
 print('Min core for e-loc:', coreshell_1.localization_electron_min_width())
 print('Min shell for h-loc:', coreshell_1.localization_hole_min_radius())
+
+coreshell_1.plot_potential_profile()

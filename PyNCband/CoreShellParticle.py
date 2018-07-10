@@ -19,6 +19,7 @@ class CoreShellParticle:
         core_width: float,
         shell_width: float,
     ):
+
         self.cmat = core_material
         self.smat = shell_material
         self.core_width = core_width
@@ -29,7 +30,6 @@ class CoreShellParticle:
 
         self.ue = np.abs(self.cmat.cbe - self.smat.cbe)
         self.uh = np.abs(self.cmat.vbe - self.smat.vbe)
-
 
 
     # This is likely to get refactored later to return types.
@@ -165,8 +165,10 @@ class CoreShellParticle:
         R, H = self.core_width, self.shell_width
 
         # The accompanying formula for these are in a Maxima file.
-        core_integral =  - ((k_h - k_e) * np.sin(R * (k_h + k_e)) - (k_h + k_e) * np.sin(R * (k_h - k_e))) / (K_e * K_h * 2 * (k_h * k_h - k_e * k_e))
-        shell_integral = - ((q_h - q_e) * np.sin(H * (q_h + q_e)) - (q_h + q_e) * np.sin(H * (q_h - q_e))) / (Q_e * Q_h * 2 * (q_h * q_h - q_e * q_e))
+        core_integral = - ((k_h - k_e) * np.sin(R * (k_h + k_e)) - (k_h + k_e) * np.sin(R * (k_h - k_e))) / (K_e * K_h
+                                                                                        * 2 * (k_h * k_h - k_e * k_e))
+        shell_integral = - ((q_h - q_e) * np.sin(H * (q_h + q_e)) - (q_h + q_e) * np.sin(H * (q_h - q_e))) / (Q_e * Q_h
+                                                                                        * 2 * (q_h * q_h - q_e * q_e))
 
         return (core_integral + shell_integral) ** 2
 
