@@ -128,7 +128,7 @@ class CoreShellParticle:
         # x = np.linspace(1e-10, self.core_width + self.shell_width, 1000)
         cwf = lambda x: unnormalized_core_wavefunction(x, core_wavevector, self.core_width)
         swf = lambda x: unnormalized_shell_wavefunction(
-            x, core_wavevector, self.core_width, self.shell_width
+            x, shell_wavevector, self.core_width, self.shell_width
         )
 
         y = np.piecewise(

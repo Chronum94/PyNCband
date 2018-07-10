@@ -1,5 +1,6 @@
 import numpy as np
 from numpy.lib.scimath import sqrt as csqrt
+from numba import jit
 
 # from .CoreShellParticle import CoreShellParticle
 
@@ -12,21 +13,42 @@ __all__ = [
     "_x_residual_function"
 ]
 
+@jit(nopython = True)
+def _unnormalized_core_wavefunction(x, k: float, core_width: float):
+    ksq = k ** 2 # Useful for the higher powers.
+    xsq = x ** 2
+    denom = np.sin(core_width * k)
+    if abs(x) < 1e-8:
+        # There is no speed penalty for **, so don't try the x * x approach.
+        val =  1/ denom * (k  -  k * ksq * xsq / 6 + k * ksq ** 2 * xsq ** 2 / 120)
+    else:
+        val  = np.sin(k * x) / (x * denom)
+    return val
 
-def unnormalized_core_wavefunction(x, k: float, core_width: float):
-    return np.sin(k * x) / (x * np.sin(k * core_width))
+unnormalized_core_wavefunction = np.vectorize(_unnormalized_core_wavefunction, otypes=(np.complex128,))
 
 
-def unnormalized_shell_wavefunction(x, q: float, core_width: float, shell_width: float):
+@jit(nopython = True)
+def _unnormalized_shell_wavefunction(x, q: float, core_width: float, shell_width: float):
+    # This doesn't need the numerical stability shenanigans
     return np.sin(q * (core_width + shell_width - x)) / (x * np.sin(q * shell_width))
 
+unnormalized_shell_wavefunction = np.vectorize(_unnormalized_shell_wavefunction, otypes=(np.complex128,))
+
+
 def wavefunction(x, k: float, q: float, core_width: float, shell_width: float):
-    if 0 <= x < core_width:
-        val = unnormalized_core_wavefunction(x, k, core_width)
-    elif core_width <= x < core_width + shell_width:
-        val = unnormalized_shell_wavefunction(x, q, core_width, shell_width)
-    else:
-        val = 0
+    # if 0 <= x < core_width:
+    #     val = unnormalized_core_wavefunction(x, k, core_width)
+    # elif core_width <= x < core_width + shell_width:
+    #     val = unnormalized_shell_wavefunction(x, q, core_width, shell_width)
+    # else:
+    #     val = 0
+    cwf = lambda x: unnormalized_core_wavefunction(x, k, core_width)
+    swf = lambda x: unnormalized_shell_wavefunction(x, q, core_width, shell_width)
+
+    particle_width = core_width + shell_width
+    val = np.piecewise(x, [x < core_width and x <= 0, x >= core_width and x < particle_width, x > particle_width],
+                       [cwf, swf, 0])
     return val
 
 
