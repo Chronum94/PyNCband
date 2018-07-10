@@ -1,6 +1,4 @@
 import numpy.testing as test
-import numpy as np
-import matplotlib.pyplot as plt
 
 from PyNCband.Material import Material
 from PyNCband.CoreShellParticle import CoreShellParticle

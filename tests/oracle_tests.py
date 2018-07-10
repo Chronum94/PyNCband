@@ -13,7 +13,7 @@ eff_mass_test = Material(1, 1, 1, 0.5, 1, "HoleMassHalf")
 
 coreshell_1 = CoreShellParticle(all_one_core, all_one_shell, 1., 1)
 
-assert coreshell_1.e_h == True
+assert coreshell_1.e_h
 print("S1 electron and hole energies:\n", coreshell_1.calculate_s1_energies())
 s1_energies = coreshell_1.calculate_s1_energies()
 test.assert_allclose(s1_energies, (1.4710728602332950, 1.4710728602332950))

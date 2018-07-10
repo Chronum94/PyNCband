@@ -67,8 +67,9 @@ def wavefunction(x, k: float, q: float, core_width: float, shell_width: float):
     #     val = unnormalized_shell_wavefunction(x, q, core_width, shell_width)
     # else:
     #     val = 0
-    cwf = lambda x: unnormalized_core_wavefunction(x, k, core_width)
-    swf = lambda x: unnormalized_shell_wavefunction(x, q, core_width, shell_width)
+    def cwf(xarg): return unnormalized_core_wavefunction(xarg, k, core_width)
+
+    def swf(xarg): return unnormalized_shell_wavefunction(xarg, q, core_width, shell_width)
 
     particle_width = core_width + shell_width
     val = np.piecewise(
@@ -173,6 +174,7 @@ def make_interface_polarization_operator(coreshellparticle):
     core_width = coreshellparticle.core_width
     core_eps, shell_eps = coreshellparticle.cmat.eps, coreshellparticle.smat.eps
     particle_radius = coreshellparticle.radius
+
     @jit(nopython=True, parallel=True)
     def coulumb_screening_operator(r_a, r_b):
         r_c = core_width

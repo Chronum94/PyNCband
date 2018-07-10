@@ -96,7 +96,7 @@ class CoreShellParticle:
             electron_eigenvalue_residual,
             x[root_position],
             x[root_position + 1],
-            args=(self),
+            args=self,
         )
 
         x = np.linspace(lower_bound_h, upper_bound_h, resolution)
@@ -108,12 +108,12 @@ class CoreShellParticle:
         yh_neg2pos_change = np.argwhere(np.where(yh_sign_change > 0.5, 1, 0))
         root_position = yh_neg2pos_change[0]
         # print(yh[root_position], yh[root_position + 1])
-        # print(hole_eigenvalue_residual(x[root_position] - 1, self), hole_eigenvalue_residual(x[root_position + 1], self))
+
         s1_hole_energy = brentq(
             hole_eigenvalue_residual,
             x[root_position],
             x[root_position + 1],
-            args=(self),
+            args=self,
         )
         # print(s1_electron_energy)
         # plt.plot(x, yh)
@@ -187,9 +187,11 @@ class CoreShellParticle:
     def numerical_overlap_integral(self):
         k_e, q_e, k_h, q_h = self.calculate_wavevectors()
 
-        ewf = lambda x: wavefunction(x, k_e, q_e, self.core_width, self.shell_width)
-        hwf = lambda x: wavefunction(x, k_h, q_h, self.core_width, self.shell_width)
-        overlap_integrand = lambda x: x * x * ewf(x) * hwf(x)
+        def ewf(x): return wavefunction(x, k_e, q_e, self.core_width, self.shell_width)
+
+        def hwf(x): return wavefunction(x, k_h, q_h, self.core_width, self.shell_width)
+
+        def overlap_integrand(x): return x * x * ewf(x) * hwf(x)
 
         overlap_integral = quad(overlap_integrand, 0, self.radius)
         return abs(overlap_integral[0]) ** 2
@@ -214,7 +216,7 @@ class CoreShellParticle:
         )
         k1 = (2 * self.cmat.m_e * self.ue) ** 0.5  # No 1/hbar because unitless.
 
-        min_core_loc_from_shell = lambda r: shell_width - m * r / (
+        def min_core_loc_from_shell(r): return shell_width - m * r / (
             1 - m + k1 * r / np.tan(k1 * r)
         )
         result = brentq(min_core_loc_from_shell, x1 / k1, np.pi / k1)
@@ -224,11 +226,10 @@ class CoreShellParticle:
         if core_width is None:
             core_width = self.core_width
         """Minimum core width for localization of electron for a given shell width."""
-        m = self.cmat.m_e / self.smat.m_e
-        # x1 = brentq(_x_residual_function, 0, np.pi / 1.001, args=(self.cmat.m_e, self.smat.m_e))
         q1 = (2 * self.smat.m_h * self.uh) ** 0.5  # No 1/hbar because unitless.
         print(q1)
-        min_shell_loc_from_core = lambda h: core_width + np.tan(q1 * h) * q1
+
+        def min_shell_loc_from_core(h): return core_width + np.tan(q1 * h) * q1
         # h = np.linspace(np.pi/ (2 * q1) + 0.1, np.pi / q1, 100)
         # plt.plot(h, min_shell_loc_from_core(h))
         # plt.show()
