@@ -235,3 +235,55 @@ class CoreShellParticle:
         result = brentq(min_shell_loc_from_core, np.pi / (2 * q1) + 1e-12, np.pi / q1)
         # print(min_shell_loc_from_core(np.pi / (2 * q1)), min_shell_loc_from_core(np.pi / q1))
         return result
+
+    def coulomb_screening_energy(self):
+        coulomb_screening_operator = make_coulomb_screening_operator(self)
+
+        k_e, q_e, k_h, q_h = self.calculate_wavevectors()
+
+        # Electron/hole density functions.
+        edf = (
+            lambda x: abs(wavefunction(x, k_e, q_e, self.core_width, self.shell_width))
+            ** 2
+        )
+        hdf = (
+            lambda x: abs(wavefunction(x, k_h, q_h, self.core_width, self.shell_width))
+            ** 2
+        )
+
+        coulomb_integrand = (
+            lambda r1, r2: r1 ** 2
+            * r2 ** 2
+            * edf(r1)
+            * hdf(r2)
+            * coulomb_screening_operator(r1, r2)
+        )
+
+        coulomb_integral = dblquad(coulomb_integrand, 0, self.radius, 0, self.radius)
+        return coulomb_integral
+
+    def interface_polarization_energy(self):
+        interface_polarization_operator = make_interface_polarization_operator(self)
+
+        k_e, q_e, k_h, q_h = self.calculate_wavevectors()
+
+        # Electron/hole density functions.
+        edf = (
+            lambda x: abs(wavefunction(x, k_e, q_e, self.core_width, self.shell_width))
+            ** 2
+        )
+        hdf = (
+            lambda x: abs(wavefunction(x, k_h, q_h, self.core_width, self.shell_width))
+            ** 2
+        )
+
+        polarization_integrand = (
+            lambda r1, r2: r1 ** 2
+            * r2 ** 2
+            * edf(r1)
+            * hdf(r2)
+            * interface_polarization_operator(r1, r2)
+        )
+
+        polarization_integral = dblquad(polarization_integrand, 0, self.radius, 0, self.radius)
+        return polarization_integral

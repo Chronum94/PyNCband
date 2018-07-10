@@ -28,7 +28,8 @@ print("Analytical overlap integral:", coreshell_1.analytical_overlap_integral())
 print("Numerical overlap integral:", coreshell_1.numerical_overlap_integral())
 print("Min core for e-loc:", coreshell_1.localization_electron_min_width())
 print("Min shell for h-loc:", coreshell_1.localization_hole_min_radius())
-
+print("Coulomb screening energy:", coreshell_1.coulomb_screening_energy())
+print("Interface polarization energy:", coreshell_1.interface_polarization_energy())
 # coreshell_1.plot_potential_profile()
 plt.plot(
     np.abs(
