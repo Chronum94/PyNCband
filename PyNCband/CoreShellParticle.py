@@ -50,9 +50,8 @@ class CoreShellParticle:
     def calculate_wavevectors(self):
         """Returns a tuple of the electron wavevectors in the core and the shell."""
         energy_e, energy_h = self.calculate_s1_energies()
-        result = None
         if self.e_h:
-            result = (
+            return (
                 wavevector_from_energy(energy_e, self.cmat.m_e),
                 wavevector_from_energy(
                     energy_e, self.smat.m_e, potential_offset=self.ue
@@ -63,7 +62,7 @@ class CoreShellParticle:
                 wavevector_from_energy(energy_h, self.smat.m_h),
             )
         elif self.h_e:
-            result = (
+            return (
                 wavevector_from_energy(
                     energy_e, self.cmat.m_e, potential_offset=self.ue
                 ),
@@ -73,7 +72,6 @@ class CoreShellParticle:
                     energy_h, self.smat.m_h, potential_offset=self.uh
                 ),
             )
-        return result
 
     def calculate_s1_energies(self, bounds=(), resolution=1000):
         lower_bound_e = self.ue + 1e-14

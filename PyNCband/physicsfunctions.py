@@ -4,7 +4,7 @@ from numba import jit
 
 from typing import Union
 
-# from .CoreShellParticle import CoreShellParticle
+from .CoreShellParticle import *
 
 __all__ = [
     "unnormalized_core_wavefunction",
@@ -34,6 +34,8 @@ def _unnormalized_core_wavefunction(x, k: float, core_width: float):
     ksq = k ** 2  # Useful for the higher powers.
     xsq = x ** 2
     denom = np.sin(core_width * k)
+
+    # The branch is for numerical stability near x = 0.
     if abs(x) < 1e-8:
         # There is no speed penalty for **, so don't try the x * x approach.
         val = 1 / denom * (k - k * ksq * xsq / 6 + k * ksq ** 2 * xsq ** 2 / 120)
@@ -51,7 +53,7 @@ unnormalized_core_wavefunction = np.vectorize(
 def _unnormalized_shell_wavefunction(
     x, q: Union[float, complex], core_width: float, shell_width: float
 ):
-    # This doesn't need the numerical stability shenanigans
+    # This doesn't need the numerical stability shenanigans because we aren't evaluating it at x = 0.
     return np.sin(q * (core_width + shell_width - x)) / (x * np.sin(q * shell_width))
 
 
@@ -130,25 +132,6 @@ def _x_residual_function(x, mass_in_core: float, mass_in_shell: float):
         )  # Somewhat warried about floating point round-off.
     else:
         return x / np.tan(x) + m - 1
-
-
-def make_coulomb_screening_operator(coreshellparticle):
-    core_width = coreshellparticle.core_width
-    core_eps, shell_eps = coreshellparticle.cmat.eps, coreshellparticle.smat.eps
-
-    @jit(nopython=True, parallel=True)
-    def coulumb_screening_operator(r_a, r_b):
-        rmax = max(r_a, r_b)
-        r_c = core_width
-        taz = 0.5  # Theta at zero, theta being step function.
-        val = -_heaviside(r_c - r_a, taz) * _heaviside(r_c - r_b, taz) / (
-            rmax * core_eps
-        ) - (_heaviside(r_a - r_c, taz) + _heaviside(r_b - r_c, taz)) / (
-            2 * rmax * shell_eps
-        )
-        return val
-
-    return coulumb_screening_operator
 
 
 def make_coulomb_screening_operator(coreshellparticle):
