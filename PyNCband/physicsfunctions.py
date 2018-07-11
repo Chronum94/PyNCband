@@ -1,6 +1,6 @@
 import numpy as np
 from numpy.lib.scimath import sqrt as csqrt
-from numba import jit
+from numba import jit, vectorize, float64, complex128
 
 from typing import Union
 
@@ -15,11 +15,11 @@ __all__ = [
     "_x_residual_function",
     "wavefunction",
     "make_coulomb_screening_operator",
-    "make_interface_polarization_operator"
+    "make_interface_polarization_operator",
 ]
 
 
-@jit(nopython=True, parallel=True)
+@jit(nopython=True)
 def _heaviside(x1, x2):
     if x1 > 0:
         return 1
@@ -29,7 +29,7 @@ def _heaviside(x1, x2):
         return 0
 
 
-@jit(nopython=True, parallel=True)
+@jit(nopython=True)
 def _unnormalized_core_wavefunction(x, k: float, core_width: float):
     ksq = k ** 2  # Useful for the higher powers.
     xsq = x ** 2
@@ -49,7 +49,7 @@ unnormalized_core_wavefunction = np.vectorize(
 )
 
 
-@jit(nopython=True, parallel=True)
+@jit(nopython=True)
 def _unnormalized_shell_wavefunction(
     x, q: Union[float, complex], core_width: float, shell_width: float
 ):
@@ -61,20 +61,46 @@ unnormalized_shell_wavefunction = np.vectorize(
     _unnormalized_shell_wavefunction, otypes=(np.complex128,)
 )
 
+# @jit(nopython=True)
+def wavefunction(x, k: complex, q: complex, core_width: float, shell_width: float):
+    """Evaluates the radially symmetric wavefunction values of the core-shell QD at given points.
 
-def wavefunction(x, k: float, q: float, core_width: float, shell_width: float):
-    # if 0 <= x < core_width:
-    #     val = unnormalized_core_wavefunction(x, k, core_width)
-    # elif core_width <= x < core_width + shell_width:
-    #     val = unnormalized_shell_wavefunction(x, q, core_width, shell_width)
-    # else:
-    #     val = 0
-    def cwf(xarg): return unnormalized_core_wavefunction(xarg, k, core_width)
+    Evaluates the full radial wavefunction of the core-shell quantum dot at given sample points `x`, with core
+    wavevector `k` and shell wavevector `q`. The `core_width` and `shell_width` variables are obvious.
 
-    def swf(xarg): return unnormalized_shell_wavefunction(xarg, q, core_width, shell_width)
+    Parameters
+    ----------
+
+    x : Array of floats.
+        The radial points at which to evaluate the wavefunction. x can contain 0, since the core wavefunction has been
+        numerically stabilized at 0.
+
+    k : complex
+        The (potentially) complex wavevector of the electron/hole in the core of the core-shell particle.
+
+    q : complex
+        The (potentially) complex wavevector of the electron/hole in the shell of the core-shell particle.
+
+    core_width : float
+        The real-valued width of the core of the nanoparticle.
+
+    shell_width : float
+        The real-valued width of the shell of the nanoparticle.
+
+    References
+    ----------
+    .. [1] Piryatinski, A., Ivanov, S. A., Tretiak, S., & Klimov, V. I. (2007). Effect of Quantum and Dielectric
+        Confinement on the Exciton−Exciton Interaction Energy in Type II Core/Shell Semiconductor Nanocrystals.
+        Nano Letters, 7(1), 108–115. https://doi.org/10.1021/nl0622404"""
+
+    def cwf(xarg):
+        return unnormalized_core_wavefunction(xarg, k, core_width)
+
+    def swf(xarg):
+        return unnormalized_shell_wavefunction(xarg, q, core_width, shell_width)
 
     particle_width = core_width + shell_width
-    val = np.piecewise(
+    return np.piecewise(
         x,
         [
             np.logical_and(x < core_width, x >= 0),
@@ -83,7 +109,6 @@ def wavefunction(x, k: float, q: float, core_width: float, shell_width: float):
         ],
         [cwf, swf, 0],
     )
-    return val
 
 
 def wavevector_from_energy(energy: float, mass: float, potential_offset: float = 0):
@@ -92,7 +117,29 @@ def wavevector_from_energy(energy: float, mass: float, potential_offset: float =
     return csqrt(2 * mass * (energy - potential_offset))
 
 
-def electron_eigenvalue_residual(energy, particle):
+def electron_eigenvalue_residual(energy: float, particle: CoreShellParticle):
+    """This function returns the residual of the electron energy level eigenvalue equation. Used with root-finding
+    methods to calculate the lowest energy state.
+
+    As of 11-July-2018, this code is not numerically stable if a few tans go to 0. This will be fixed, since the limits
+    exist, and they will be conditionally dealt with.
+
+    Parameters
+    ----------
+
+    energy : float
+        The energy for which to calculate the wavevector of an electron in the nanoparticle.
+
+    particle : CoreShellParticle
+        The particle for which to calculate the electron wavevectors. We pass in the particle directly since there
+        are a lot of parameters to pass in and this keeps the interface clean.
+
+    References
+    ----------
+
+    .. [1] Piryatinski, A., Ivanov, S. A., Tretiak, S., & Klimov, V. I. (2007). Effect of Quantum and Dielectric
+        Confinement on the Exciton−Exciton Interaction Energy in Type II Core/Shell Semiconductor Nanocrystals.
+        Nano Letters, 7(1), 108–115. https://doi.org/10.1021/nl0622404"""
     if particle.e_h:
         k_e = wavevector_from_energy(energy, particle.cmat.m_e)
         q_e = wavevector_from_energy(
@@ -108,6 +155,29 @@ def electron_eigenvalue_residual(energy, particle):
 
 
 def hole_eigenvalue_residual(energy, particle):
+    """This function returns the residual of the hole energy level eigenvalue equation. Used with root-finding
+    methods to calculate the lowest energy state.
+
+    As of 11-July-2018, this code is not numerically stable if a few tans go to 0. This will be fixed, since the limits
+    exist, and they will be conditionally dealt with.
+
+    Parameters
+    ----------
+
+    energy : float
+        The energy for which to calculate the wavevector of a hole in in the nanoparticle.
+
+    particle : CoreShellParticle
+        The particle for which to calculate the hole wavevectors. We pass in the particle directly since there
+        are a lot of parameters to pass in and this keeps the interface clean.
+
+    References
+    ----------
+
+    .. [1] Piryatinski, A., Ivanov, S. A., Tretiak, S., & Klimov, V. I. (2007). Effect of Quantum and Dielectric
+        Confinement on the Exciton−Exciton Interaction Energy in Type II Core/Shell Semiconductor Nanocrystals.
+        Nano Letters, 7(1), 108–115. https://doi.org/10.1021/nl0622404"""
+
     if particle.e_h:
         k_h = wavevector_from_energy(
             energy, particle.cmat.m_h, potential_offset=particle.uh

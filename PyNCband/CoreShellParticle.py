@@ -108,10 +108,7 @@ class CoreShellParticle:
         # print(yh[root_position], yh[root_position + 1])
 
         s1_hole_energy = brentq(
-            hole_eigenvalue_residual,
-            x[root_position],
-            x[root_position + 1],
-            args=self,
+            hole_eigenvalue_residual, x[root_position], x[root_position + 1], args=self
         )
         # print(s1_electron_energy)
         # plt.plot(x, yh)
@@ -185,11 +182,14 @@ class CoreShellParticle:
     def numerical_overlap_integral(self):
         k_e, q_e, k_h, q_h = self.calculate_wavevectors()
 
-        def ewf(x): return wavefunction(x, k_e, q_e, self.core_width, self.shell_width)
+        def ewf(x):
+            return wavefunction(x, k_e, q_e, self.core_width, self.shell_width)
 
-        def hwf(x): return wavefunction(x, k_h, q_h, self.core_width, self.shell_width)
+        def hwf(x):
+            return wavefunction(x, k_h, q_h, self.core_width, self.shell_width)
 
-        def overlap_integrand(x): return x * x * ewf(x) * hwf(x)
+        def overlap_integrand(x):
+            return x * x * ewf(x) * hwf(x)
 
         overlap_integral = quad(overlap_integrand, 0, self.radius)
         return abs(overlap_integral[0]) ** 2
@@ -201,9 +201,6 @@ class CoreShellParticle:
             )
         )
 
-    def __normalize_wavefunction(self):
-        raise NotImplementedError
-
     def localization_electron_min_width(self, shell_width: float = None):
         if shell_width is None:
             shell_width = self.shell_width
@@ -214,9 +211,9 @@ class CoreShellParticle:
         )
         k1 = (2 * self.cmat.m_e * self.ue) ** 0.5  # No 1/hbar because unitless.
 
-        def min_core_loc_from_shell(r): return shell_width - m * r / (
-            1 - m + k1 * r / np.tan(k1 * r)
-        )
+        def min_core_loc_from_shell(r):
+            return shell_width - m * r / (1 - m + k1 * r / np.tan(k1 * r))
+
         result = brentq(min_core_loc_from_shell, x1 / k1, np.pi / k1)
         return result
 
@@ -227,7 +224,9 @@ class CoreShellParticle:
         q1 = (2 * self.smat.m_h * self.uh) ** 0.5  # No 1/hbar because unitless.
         print(q1)
 
-        def min_shell_loc_from_core(h): return core_width + np.tan(q1 * h) * q1
+        def min_shell_loc_from_core(h):
+            return core_width + np.tan(q1 * h) * q1
+
         # h = np.linspace(np.pi/ (2 * q1) + 0.1, np.pi / q1, 100)
         # plt.plot(h, min_shell_loc_from_core(h))
         # plt.show()
@@ -241,14 +240,15 @@ class CoreShellParticle:
         k_e, q_e, k_h, q_h = self.calculate_wavevectors()
 
         # Electron/hole density functions.
-        edf = (
-            lambda x: abs(wavefunction(x, k_e, q_e, self.core_width, self.shell_width))
-            ** 2
-        )
-        hdf = (
-            lambda x: abs(wavefunction(x, k_h, q_h, self.core_width, self.shell_width))
-            ** 2
-        )
+        def edf(x):
+            return (
+                abs(wavefunction(x, k_e, q_e, self.core_width, self.shell_width)) ** 2
+            )
+
+        def hdf(x):
+            return (
+                abs(wavefunction(x, k_h, q_h, self.core_width, self.shell_width)) ** 2
+            )
 
         coulomb_integrand = (
             lambda r1, r2: r1 ** 2
@@ -284,5 +284,7 @@ class CoreShellParticle:
             * interface_polarization_operator(r1, r2)
         )
 
-        polarization_integral = dblquad(polarization_integrand, 0, self.radius, 0, self.radius)
+        polarization_integral = dblquad(
+            polarization_integrand, 0, self.radius, 0, self.radius
+        )
         return polarization_integral
