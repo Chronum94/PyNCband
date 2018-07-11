@@ -1,3 +1,4 @@
+from typing import Tuple
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -73,17 +74,17 @@ class CoreShellParticle:
                 ),
             )
 
-    def calculate_s1_energies(self, bounds=(), resolution=1000):
+    # This method can currently only find cases where the energy of the lowest state is above the poetntial step.
+    def calculate_s1_energies(self, bounds=(), resolution=1000) -> Tuple[float, float]:
         lower_bound_e = self.ue + 1e-14
         upper_bound_e = 10 * self.ue
         lower_bound_h = self.uh + 1e-14
         upper_bound_h = 10 * self.uh
 
-        x = np.linspace(lower_bound_e, upper_bound_e, resolution)
+        x: np.ndarray = np.linspace(lower_bound_e, upper_bound_e, resolution)
         if bounds != ():
             x = np.linspace(bounds[0], bounds[1], resolution)
         ye = electron_eigenvalue_residual(x, self)
-        # print(np.all(np.isreal(yh)))
 
         ye_signs = np.sign(ye)
         ye_sign_change = np.diff(ye_signs)  # This array is one element shorter.
@@ -94,7 +95,7 @@ class CoreShellParticle:
             electron_eigenvalue_residual,
             x[root_position],
             x[root_position + 1],
-            args=self,
+            args=(self,)
         )
 
         x = np.linspace(lower_bound_h, upper_bound_h, resolution)
@@ -108,7 +109,7 @@ class CoreShellParticle:
         # print(yh[root_position], yh[root_position + 1])
 
         s1_hole_energy = brentq(
-            hole_eigenvalue_residual, x[root_position], x[root_position + 1], args=self
+            hole_eigenvalue_residual, x[root_position], x[root_position + 1], args=(self,)
         )
         # print(s1_electron_energy)
         # plt.plot(x, yh)
@@ -120,21 +121,6 @@ class CoreShellParticle:
         self, x, core_wavevector: float, shell_wavevector: float
     ):
 
-        # x = np.linspace(1e-10, self.core_width + self.shell_width, 1000)
-        # cwf = lambda x: unnormalized_core_wavefunction(x, core_wavevector, self.core_width)
-        # swf = lambda x: unnormalized_shell_wavefunction(
-        #     x, shell_wavevector, self.core_width, self.shell_width
-        # )
-        #
-        # y = np.piecewise(
-        #     x,
-        #     [
-        #         x < self.core_width,
-        #         x > self.core_width,
-        #         x > self.core_width + self.shell_width,
-        #     ],
-        #     [cwf, swf, 0],
-        # )
         y = wavefunction(
             x, core_wavevector, shell_wavevector, self.core_width, self.shell_width
         )
@@ -188,11 +174,14 @@ class CoreShellParticle:
         def hwf(x):
             return wavefunction(x, k_h, q_h, self.core_width, self.shell_width)
 
-        def overlap_integrand(x):
-            return x * x * ewf(x) * hwf(x)
+        def overlap_integrand_real(x):
+            return np.real(x * x * ewf(x) * hwf(x))
+        def overlap_integrand_imag(x):
+            return np.imag(x * x * ewf(x) * hwf(x))
 
-        overlap_integral = quad(overlap_integrand, 0, self.radius)
-        return abs(overlap_integral[0]) ** 2
+        overlap_integral_real = quad(overlap_integrand_real, 0, self.radius)
+        overlap_integral_imag = quad(overlap_integrand_imag, 0, self.radius)
+        return abs(overlap_integral_real[0] + 1j * overlap_integral_imag[0]) ** 2
 
     def print_e_wf_at_zero(self):
         print(
@@ -211,8 +200,8 @@ class CoreShellParticle:
         )
         k1 = (2 * self.cmat.m_e * self.ue) ** 0.5  # No 1/hbar because unitless.
 
-        def min_core_loc_from_shell(r):
-            return shell_width - m * r / (1 - m + k1 * r / np.tan(k1 * r))
+        def min_core_loc_from_shell(r: float) -> float:
+            return shell_width - m * r / (1 - m + 1/ _tanxdivx(k1 * r))
 
         result = brentq(min_core_loc_from_shell, x1 / k1, np.pi / k1)
         return result
@@ -224,7 +213,7 @@ class CoreShellParticle:
         q1 = (2 * self.smat.m_h * self.uh) ** 0.5  # No 1/hbar because unitless.
         print(q1)
 
-        def min_shell_loc_from_core(h):
+        def min_shell_loc_from_core(h: float) -> float:
             return core_width + np.tan(q1 * h) * q1
 
         # h = np.linspace(np.pi/ (2 * q1) + 0.1, np.pi / q1, 100)
@@ -258,7 +247,7 @@ class CoreShellParticle:
             * coulomb_screening_operator(r1, r2)
         )
 
-        coulomb_integral = dblquad(coulomb_integrand, 0, self.radius, 0, self.radius)
+        coulomb_integral = dblquad(coulomb_integrand, 0, self.radius, 0, self.radius, epsrel=1e-3)
         return coulomb_integral
 
     def interface_polarization_energy(self):
@@ -285,6 +274,6 @@ class CoreShellParticle:
         )
 
         polarization_integral = dblquad(
-            polarization_integrand, 0, self.radius, 0, self.radius
+            polarization_integrand, 0, self.radius, 0, self.radius, epsrel=1e-3
         )
         return polarization_integral

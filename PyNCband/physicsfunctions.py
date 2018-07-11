@@ -4,6 +4,7 @@ from numba import jit, vectorize, float64, complex128
 
 from typing import Union
 
+# This only imports the  CoreShellFunction class and is done because otherwise the cyclic import fails.
 from .CoreShellParticle import *
 
 __all__ = [
@@ -13,14 +14,16 @@ __all__ = [
     "electron_eigenvalue_residual",
     "hole_eigenvalue_residual",
     "_x_residual_function",
+    "_tanxdivx",
     "wavefunction",
     "make_coulomb_screening_operator",
     "make_interface_polarization_operator",
 ]
 
-
+floatcomplex = Union[float, complex]
+floatarray = Union[float, np.ndarray]
 @jit(nopython=True)
-def _heaviside(x1, x2):
+def _heaviside(x1: float, x2: float = 0.5) -> float:
     if x1 > 0:
         return 1
     elif x1 == 0:
@@ -30,7 +33,19 @@ def _heaviside(x1, x2):
 
 
 @jit(nopython=True)
-def _unnormalized_core_wavefunction(x, k: float, core_width: float):
+def _tanxdivx(x: floatcomplex) -> floatcomplex:
+    xsq = x ** 2
+    if abs(x) < 1e-8:
+        return 1 - xsq / 2 -  xsq ** 2 / 45 - 2 * xsq ** 3 / 945
+    else:
+        return np.tan(x)/x
+
+
+tanxdivx = np.vectorize(_tanxdivx, otypes=(np.complex128,))
+
+
+@jit(nopython=True)
+def _unnormalized_core_wavefunction(x: float, k: floatcomplex, core_width: float) -> floatcomplex:
     ksq = k ** 2  # Useful for the higher powers.
     xsq = x ** 2
     denom = np.sin(core_width * k)
@@ -51,9 +66,11 @@ unnormalized_core_wavefunction = np.vectorize(
 
 @jit(nopython=True)
 def _unnormalized_shell_wavefunction(
-    x, q: Union[float, complex], core_width: float, shell_width: float
-):
+        x: float, q: floatcomplex, core_width: float, shell_width: float
+) -> floatcomplex:
     # This doesn't need the numerical stability shenanigans because we aren't evaluating it at x = 0.
+    # But sin(q * shell_width) can still go to 0, technically. This may not happen because of how q is constrained.
+    # Needs testing.
     return np.sin(q * (core_width + shell_width - x)) / (x * np.sin(q * shell_width))
 
 
@@ -61,8 +78,9 @@ unnormalized_shell_wavefunction = np.vectorize(
     _unnormalized_shell_wavefunction, otypes=(np.complex128,)
 )
 
+
 # @jit(nopython=True)
-def wavefunction(x, k: complex, q: complex, core_width: float, shell_width: float):
+def wavefunction(x: np.ndarray, k: floatcomplex, q: floatcomplex, core_width: float, shell_width: float):
     """Evaluates the radially symmetric wavefunction values of the core-shell QD at given points.
 
     Evaluates the full radial wavefunction of the core-shell quantum dot at given sample points `x`, with core
@@ -111,13 +129,13 @@ def wavefunction(x, k: complex, q: complex, core_width: float, shell_width: floa
     )
 
 
-def wavevector_from_energy(energy: float, mass: float, potential_offset: float = 0):
+def wavevector_from_energy(energy: float, mass: float, potential_offset: float = 0) -> float:
     # There's a 1/hbar ** 2 factor under that square root.
     # Omitting it because hbar is obviously 1.
     return csqrt(2 * mass * (energy - potential_offset))
 
-
-def electron_eigenvalue_residual(energy: float, particle: CoreShellParticle):
+# TODO: Treat the fully complex case of complex wavevector in the potential-step region.
+def electron_eigenvalue_residual(energy: float, particle):
     """This function returns the residual of the electron energy level eigenvalue equation. Used with root-finding
     methods to calculate the lowest energy state.
 
@@ -147,14 +165,14 @@ def electron_eigenvalue_residual(energy: float, particle: CoreShellParticle):
         )
         core_x = k_e * particle.core_width
         with np.errstate(divide="ignore", invalid="ignore"):
-            return (
-                (1 - core_x / np.tan(core_x)) * particle.smat.m_e / particle.cmat.m_e
-                - 1
-                - q_e * particle.core_width / np.tan(q_e * particle.shell_width)
+            return np.real(
+                    (1 - core_x / np.tan(core_x)) * particle.smat.m_e / particle.cmat.m_e
+                    - 1
+                    - q_e * particle.core_width / np.tan(q_e * particle.shell_width)
             )
 
-
-def hole_eigenvalue_residual(energy, particle):
+# TODO: Treat the fully complex case of complex wavevector in the potential-step region.
+def hole_eigenvalue_residual(energy: float, particle):
     """This function returns the residual of the hole energy level eigenvalue equation. Used with root-finding
     methods to calculate the lowest energy state.
 
@@ -186,10 +204,10 @@ def hole_eigenvalue_residual(energy, particle):
 
         core_x = k_h * particle.core_width
         with np.errstate(divide="ignore", invalid="ignore"):
-            return (
-                (1 - core_x / np.tan(core_x)) * particle.smat.m_h / particle.cmat.m_h
-                - 1
-                - q_h * particle.core_width / np.tan(q_h * particle.shell_width)
+            return np.real(
+                    (1 - 1 / tanxdivx(core_x)) * particle.smat.m_h / particle.cmat.m_h
+                    - 1
+                    - particle.core_width / particle.shell_width / tanxdivx(q_h * particle.shell_width)
             )
 
 
@@ -197,11 +215,11 @@ def _x_residual_function(x, mass_in_core: float, mass_in_shell: float):
     m = mass_in_shell / mass_in_core
     xsq = x ** 2
     if -1e-3 < x < 1e-3:
-        return (
-            m - xsq / 3 - xsq ** 2 / 45 - xsq ** 3 / 945
+        return np.real(
+                m - xsq / 3 - xsq ** 2 / 45 - xsq ** 3 / 945
         )  # Somewhat warried about floating point round-off.
     else:
-        return x / np.tan(x) + m - 1
+        return 1 / _tanxdivx(x) + m - 1
 
 
 def make_coulomb_screening_operator(coreshellparticle):
@@ -214,10 +232,10 @@ def make_coulomb_screening_operator(coreshellparticle):
         r_c = core_width
         taz = 0.5  # Theta at zero, theta being step function.
         val = -_heaviside(r_c - r_a, taz) * _heaviside(r_c - r_b, taz) / (
-            rmax * core_eps
+                rmax * core_eps
         ) - (_heaviside(r_a - r_c, taz) + _heaviside(r_b - r_c, taz)) / (
-            2 * rmax * shell_eps
-        )
+                      2 * rmax * shell_eps
+              )
         return val
 
     return coulumb_screening_operator
@@ -234,7 +252,7 @@ def make_interface_polarization_operator(coreshellparticle):
         r_p = particle_radius
         taz = 0.5  # Theta at zero, theta being step function.
         val = -_heaviside(r_c - r_a, taz) * _heaviside(r_c - r_b, taz) * (
-            core_eps / shell_eps - 1
+                core_eps / shell_eps - 1
         ) / (r_c * core_eps) - (shell_eps - 1) / (2 * r_p * shell_eps)
         return val
 
