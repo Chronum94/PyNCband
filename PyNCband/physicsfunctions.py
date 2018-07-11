@@ -79,8 +79,8 @@ unnormalized_shell_wavefunction = np.vectorize(
 )
 
 
-# @jit(nopython=True)
-def wavefunction(x: np.ndarray, k: floatcomplex, q: floatcomplex, core_width: float, shell_width: float):
+@jit(nopython=True)
+def _wavefunction(x: float, k: floatcomplex, q: floatcomplex, core_width: float, shell_width: float) -> floatcomplex:
     """Evaluates the radially symmetric wavefunction values of the core-shell QD at given points.
 
     Evaluates the full radial wavefunction of the core-shell quantum dot at given sample points `x`, with core
@@ -112,21 +112,21 @@ def wavefunction(x: np.ndarray, k: floatcomplex, q: floatcomplex, core_width: fl
         Nano Letters, 7(1), 108–115. https://doi.org/10.1021/nl0622404"""
 
     def cwf(xarg):
-        return unnormalized_core_wavefunction(xarg, k, core_width)
+        return _unnormalized_core_wavefunction(xarg, k, core_width)
 
     def swf(xarg):
-        return unnormalized_shell_wavefunction(xarg, q, core_width, shell_width)
+        return _unnormalized_shell_wavefunction(xarg, q, core_width, shell_width)
 
     particle_width = core_width + shell_width
-    return np.piecewise(
-        x,
-        [
-            np.logical_and(x < core_width, x >= 0),
-            np.logical_and(x >= core_width, x < particle_width),
-            x > particle_width,
-        ],
-        [cwf, swf, 0],
-    )
+
+    if 0 <= x < core_width:
+        return cwf(x)
+    elif core_width <= x < particle_width:
+        return swf(x)
+    else:
+        return 0
+
+wavefunction = np.vectorize(_wavefunction, otypes=(np.complex128,))
 
 
 def wavevector_from_energy(energy: float, mass: float, potential_offset: float = 0) -> float:
