@@ -203,6 +203,8 @@ class CoreShellParticle:
             )
         )
 
+
+    # TODO: Implement branch for eh/he coreshells.
     def localization_electron_min_width(self, shell_width: float = None):
         """Minimum core width for localization of electron for a given shell width."""
         if shell_width is None:
@@ -220,6 +222,7 @@ class CoreShellParticle:
         result = brentq(min_core_loc_from_shell, x1 / k1, np.pi / k1)
         return result
 
+    # TODO: Implement branch for eh/he coreshells.
     def localization_hole_min_radius(self, core_width: float = None):
         if core_width is None:
             core_width = self.core_width

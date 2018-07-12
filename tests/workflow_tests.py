@@ -19,18 +19,21 @@ x = np.linspace(1, 2, 10)
 
 xx, yy = np.meshgrid(x, x)
 zz = np.zeros_like(xx)
-def f():
-    for i, cw in enumerate(x):
-        for j, sw in enumerate(x):
-            CdS_AlSb.set_core_width(cw)
-            CdS_AlSb.set_shell_width(sw)
-            zz[i, j] = CdS_AlSb.analytical_overlap_integral()
-            test.assert_approx_equal(zz[i, j], CdS_AlSb.numerical_overlap_integral())
 
-    # plt.imshow(zz)
-    # plt.colorbar()
-    # # plt.clim(0, 20)
-    # plt.show()
+# @profile
 
-if __name__ == "__main__":
-    f()
+# for i, cw in enumerate(x):
+#     for j, sw in enumerate(x):
+#         CdS_AlSb.set_core_width(cw)
+#         CdS_AlSb.set_shell_width(sw)
+#         zz[i, j] = CdS_AlSb.analytical_overlap_integral()
+#         test.assert_approx_equal(zz[i, j], CdS_AlSb.numerical_overlap_integral())
+
+
+for shellw in np.linspace(3, 100, 100):
+    print(CdS_AlSb.localization_electron_min_width())
+
+# plt.imshow(zz)
+# plt.colorbar()
+# # plt.clim(0, 20)
+# plt.show()
