@@ -29,7 +29,7 @@ class CoreShellParticle:
         self.radius = core_width + shell_width
         self.type_one = self.is_type_one()
         self.type_two, self.h_e, self.e_h = self.is_type_two()
-
+        self.kvectors_valid: bool = False # This is an observer variable so we don't have to recalculate
         self.ue = np.abs(self.cmat.cbe - self.smat.cbe)
         self.uh = np.abs(self.cmat.vbe - self.smat.vbe)
 
@@ -37,7 +37,7 @@ class CoreShellParticle:
     def is_type_one(self):
         return (self.cmat.vbe > self.smat.vbe) and (self.cmat.cbe < self.smat.cbe)
 
-    def is_type_two(self):
+    def is_type_two (self):
         """"A type two QD has both conduction and valence band edges of its core either higher or lower than the
         corresponding band edges of the shell."""
         core_higher = (self.cmat.vbe > self.smat.vbe) and (
@@ -76,6 +76,7 @@ class CoreShellParticle:
 
     # This method can currently only find cases where the energy of the lowest state is above the poetntial step.
     def calculate_s1_energies(self, bounds=(), resolution=1000) -> Tuple[float, float]:
+
         lower_bound_e = self.ue + 1e-14
         upper_bound_e = 10 * self.ue
         lower_bound_h = self.uh + 1e-14
@@ -95,7 +96,7 @@ class CoreShellParticle:
             electron_eigenvalue_residual,
             x[root_position],
             x[root_position + 1],
-            args=(self,)
+            args=(self,),
         )
 
         x = np.linspace(lower_bound_h, upper_bound_h, resolution)
@@ -109,7 +110,10 @@ class CoreShellParticle:
         # print(yh[root_position], yh[root_position + 1])
 
         s1_hole_energy = brentq(
-            hole_eigenvalue_residual, x[root_position], x[root_position + 1], args=(self,)
+            hole_eigenvalue_residual,
+            x[root_position],
+            x[root_position + 1],
+            args=(self,),
         )
         # print(s1_electron_energy)
         # plt.plot(x, yh)
@@ -176,6 +180,7 @@ class CoreShellParticle:
 
         def overlap_integrand_real(x):
             return np.real(x * x * ewf(x) * hwf(x))
+
         def overlap_integrand_imag(x):
             return np.imag(x * x * ewf(x) * hwf(x))
 
@@ -184,6 +189,7 @@ class CoreShellParticle:
         return abs(overlap_integral_real[0] + 1j * overlap_integral_imag[0]) ** 2
 
     def print_e_wf_at_zero(self):
+        """"""
         print(
             unnormalized_core_wavefunction(
                 1e-14, self.calculate_wavevectors()[0], self.core_width
@@ -191,9 +197,10 @@ class CoreShellParticle:
         )
 
     def localization_electron_min_width(self, shell_width: float = None):
+        """Minimum core width for localization of electron for a given shell width."""
         if shell_width is None:
             shell_width = self.shell_width
-        """Minimum core width for localization of electron for a given shell width."""
+
         m = self.cmat.m_e / self.smat.m_e
         x1 = brentq(
             _x_residual_function, 0, np.pi / 1.001, args=(self.cmat.m_e, self.smat.m_e)
@@ -201,7 +208,7 @@ class CoreShellParticle:
         k1 = (2 * self.cmat.m_e * self.ue) ** 0.5  # No 1/hbar because unitless.
 
         def min_core_loc_from_shell(r: float) -> float:
-            return shell_width - m * r / (1 - m + 1/ _tanxdivx(k1 * r))
+            return shell_width - m * r / (1 - m + 1 / _tanxdivx(k1 * r))
 
         result = brentq(min_core_loc_from_shell, x1 / k1, np.pi / k1)
         return result
@@ -211,7 +218,7 @@ class CoreShellParticle:
             core_width = self.core_width
         """Minimum core width for localization of electron for a given shell width."""
         q1 = (2 * self.smat.m_h * self.uh) ** 0.5  # No 1/hbar because unitless.
-        print(q1)
+        # print(q1)
 
         def min_shell_loc_from_core(h: float) -> float:
             return core_width + np.tan(q1 * h) * q1
@@ -247,7 +254,9 @@ class CoreShellParticle:
             * coulomb_screening_operator(r1, r2)
         )
 
-        coulomb_integral = dblquad(coulomb_integrand, 0, self.radius, 0, self.radius, epsrel=1e-3)
+        coulomb_integral = dblquad(
+            coulomb_integrand, 0, self.radius, 0, self.radius, epsrel=1e-3
+        )
         return coulomb_integral
 
     def interface_polarization_energy(self):
