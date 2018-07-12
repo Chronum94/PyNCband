@@ -40,15 +40,15 @@ class Material:
         name : str
             The name of the material."""
 
-        self.bandgap = bandgap
+        self.bandgap: float = bandgap
 
-        self.cbe = conduction_band_edge
-        self.vbe = conduction_band_edge - bandgap
+        self.cbe: float = conduction_band_edge
+        self.vbe: float = conduction_band_edge - bandgap
 
-        self.m_e = electron_eff_mass
-        self.m_h = hole_eff_mass
-        self.eps = epsilon
-        self.name = name
+        self.m_e: float = electron_eff_mass
+        self.m_h: float = hole_eff_mass
+        self.eps: float = epsilon
+        self.name: str = name
 
     def __str__(self):
         if self.name is not None:

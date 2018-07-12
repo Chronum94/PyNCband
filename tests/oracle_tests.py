@@ -12,7 +12,7 @@ all_one_shell = Material(1, -0.5, 1, 1, 1, "Ones")
 eff_mass_test = Material(1, 1, 1, 0.5, 1, "HoleMassHalf")
 
 coreshell_1 = CoreShellParticle(all_one_core, all_one_shell, 1., 1)
-
+coreshell_2 = CoreShellParticle(all_one_core, eff_mass_test, 3, 3)
 assert coreshell_1.e_h
 print("S1 electron and hole energies:\n", coreshell_1.calculate_s1_energies())
 s1_energies = coreshell_1.calculate_s1_energies()
@@ -35,6 +35,15 @@ plt.plot(
     np.abs(
         coreshell_1.plot_electron_wavefunction(
             np.linspace(0, 3, 100), 1.715268410618755, 1.393608883606369
+        )
+    )
+)
+plt.show()
+
+plt.plot(
+    np.abs(
+        coreshell_2.plot_electron_wavefunction(
+            np.linspace(0, 6, 100), 1.715268410618755, 1.393608883606369
         )
     )
 )
