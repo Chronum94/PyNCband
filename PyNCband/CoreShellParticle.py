@@ -27,30 +27,33 @@ class CoreShellParticle:
         self.core_width = core_width
         self.shell_width = shell_width
         self.radius = core_width + shell_width
-        self.type_one = self.is_type_one()
-        self.type_two, self.h_e, self.e_h = self.is_type_two()
-        self.kvectors_valid: bool = False  # This is an observer variable so we don't have to recalculate
+        self.type_one = self._is_type_one()
+        self.type_two, self.h_e, self.e_h = self._is_type_two()
+        # This is an observer variable so we don't have to recalculate eigen-energies every time.
+        self.energies_valid: bool = False
+        self.s1_e, self.s1_h = None, None
         self.ue = np.abs(self.cmat.cbe - self.smat.cbe)
         self.uh = np.abs(self.cmat.vbe - self.smat.vbe)
 
-    # This is likely to get refactored later to return types.
-    def is_type_one(self):
-        return (self.cmat.vbe > self.smat.vbe) and (self.cmat.cbe < self.smat.cbe)
+    def set_core_width(self, x):
+        self.core_width = x
+        self.energies_valid = False
 
-    def is_type_two(self):
-        """"A type two QD has both conduction and valence band edges of its core either higher or lower than the
-        corresponding band edges of the shell."""
-        core_higher = (self.cmat.vbe > self.smat.vbe) and (
-            self.cmat.cbe > self.smat.cbe
-        )
-        shell_higher = (self.cmat.vbe < self.smat.vbe) and (
-            self.cmat.cbe < self.smat.cbe
-        )
-        return core_higher or shell_higher, core_higher, shell_higher
+    def set_shell_width(self, x):
+        self.shell_width = x
+        self.energies_valid = False
 
     def calculate_wavevectors(self):
         """Returns a tuple of the electron wavevectors in the core and the shell."""
-        energy_e, energy_h = self.calculate_s1_energies()
+        # energy_e, energy_h = None, None
+        if self.energies_valid:
+            energy_e, energy_h = self.s1_e, self.s1_h
+        else:
+            self.s1_e, self.s1_h = self.calculate_s1_energies()
+            energy_e, energy_h = self.s1_e, self.s1_h
+            self.energies_valid = True # This gets set to false when we change core/shell radius, etc.
+
+
         if self.e_h:
             return (
                 wavevector_from_energy(energy_e, self.cmat.m_e),
@@ -292,3 +295,18 @@ class CoreShellParticle:
             self.radius,
             epsrel=relative_tolerance,
         )
+
+    # This is likely to get refactored later to return types.
+    def _is_type_one(self):
+        return (self.cmat.vbe > self.smat.vbe) and (self.cmat.cbe < self.smat.cbe)
+
+    def _is_type_two(self):
+        """"A type two QD has both conduction and valence band edges of its core either higher or lower than the
+        corresponding band edges of the shell."""
+        core_higher = (self.cmat.vbe > self.smat.vbe) and (
+            self.cmat.cbe > self.smat.cbe
+        )
+        shell_higher = (self.cmat.vbe < self.smat.vbe) and (
+            self.cmat.cbe < self.smat.cbe
+        )
+        return core_higher or shell_higher, core_higher, shell_higher
