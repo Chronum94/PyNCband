@@ -2,10 +2,12 @@ import numpy as np
 from numpy.lib.scimath import sqrt as csqrt
 from numba import jit, vectorize, float64, complex128
 
-from typing import Union
+from typing import Union, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .CoreShellParticle import CoreShellParticle
 
 # This only imports the  CoreShellFunction class and is done because otherwise the cyclic import fails.
-from .CoreShellParticle import *
 
 __all__ = [
     "unnormalized_core_wavefunction",
@@ -34,16 +36,18 @@ def _heaviside(x1: float, x2: float = 0.5) -> float:
         return 0
 
 
+# @vectorize(nopython=True)
 @jit(nopython=True)
 def _tanxdivx(x: floatcomplex) -> floatcomplex:
     xsq = x ** 2
-    if abs(x) < 1e-8:
-        return 1 - xsq / 2 - xsq ** 2 / 45 - 2 * xsq ** 3 / 945
+    # A simple 2nd order Taylor expansion will be accurate enough this close to 0.
+    if abs(x) < 1e-13:
+        return 1 - xsq / 2
     else:
         return np.tan(x) / x
 
 
-tanxdivx = np.vectorize(_tanxdivx, otypes=(np.complex128,))
+tanxdivx = np.vectorize(_tanxdivx)  # np.vectorize(_tanxdivx, otypes=(np.complex128,))
 
 
 @jit(nopython=True)
@@ -145,7 +149,7 @@ def wavevector_from_energy(
 
 
 # TODO: Treat the fully complex case of complex wavevector in the potential-step region.
-def electron_eigenvalue_residual(energy: float, particle):
+def electron_eigenvalue_residual(energy: float, particle: "CoreShellParticle") -> float:
     """This function returns the residual of the electron energy level eigenvalue equation. Used with root-finding
     methods to calculate the lowest energy state.
 
@@ -168,22 +172,36 @@ def electron_eigenvalue_residual(energy: float, particle):
     .. [1] Piryatinski, A., Ivanov, S. A., Tretiak, S., & Klimov, V. I. (2007). Effect of Quantum and Dielectric
         Confinement on the Exciton−Exciton Interaction Energy in Type II Core/Shell Semiconductor Nanocrystals.
         Nano Letters, 7(1), 108–115. https://doi.org/10.1021/nl0622404"""
+    k_e, q_e = None, None
     if particle.e_h:
         k_e = wavevector_from_energy(energy, particle.cmat.m_e)
         q_e = wavevector_from_energy(
             energy, particle.smat.m_e, potential_offset=particle.ue
         )
-        core_x = k_e * particle.core_width
-        with np.errstate(divide="ignore", invalid="ignore"):
-            return np.real(
-                (1 - core_x / np.tan(core_x)) * particle.smat.m_e / particle.cmat.m_e
-                - 1
-                - q_e * particle.core_width / np.tan(q_e * particle.shell_width)
-            )
+    elif particle.h_e:
+        k_e = wavevector_from_energy(
+            energy, particle.cmat.m_e, potential_offset=particle.ue
+        )
+        q_e = wavevector_from_energy(energy, particle.smat.m_e)
+    core_x = k_e * particle.core_width
+    shell_x = q_e * particle.shell_width
+    core_width = particle.core_width
+    shell_width = particle.shell_width
+    mass_ratio = particle.smat.m_e / particle.cmat.m_e
+
+    # @jit(nopython = True)
+    def _residual():
+        return np.real(
+            (1 - 1 / tanxdivx(core_x)) * mass_ratio
+            - 1
+            - 1 / tanxdivx(shell_x) * core_width / shell_width
+        )
+
+    return _residual()
 
 
 # TODO: Treat the fully complex case of complex wavevector in the potential-step region.
-def hole_eigenvalue_residual(energy: float, particle):
+def hole_eigenvalue_residual(energy: float, particle: 'CoreShellParticle') -> float:
     """This function returns the residual of the hole energy level eigenvalue equation. Used with root-finding
     methods to calculate the lowest energy state.
 
@@ -224,7 +242,7 @@ def hole_eigenvalue_residual(energy: float, particle):
             )
 
 
-def _x_residual_function(x, mass_in_core: float, mass_in_shell: float):
+def _x_residual_function(x: floatarray, mass_in_core: float, mass_in_shell: float):
     m = mass_in_shell / mass_in_core
     xsq = x ** 2
     if -1e-3 < x < 1e-3:
@@ -235,7 +253,7 @@ def _x_residual_function(x, mass_in_core: float, mass_in_shell: float):
         return 1 / _tanxdivx(x) + m - 1
 
 
-def make_coulomb_screening_operator(coreshellparticle):
+def make_coulomb_screening_operator(coreshellparticle: 'CoreShellParticle'):
     core_width = coreshellparticle.core_width
     core_eps, shell_eps = coreshellparticle.cmat.eps, coreshellparticle.smat.eps
 
@@ -254,7 +272,7 @@ def make_coulomb_screening_operator(coreshellparticle):
     return coulumb_screening_operator
 
 
-def make_interface_polarization_operator(coreshellparticle):
+def make_interface_polarization_operator(coreshellparticle: 'CoreShellParticle'):
     core_width = coreshellparticle.core_width
     core_eps, shell_eps = coreshellparticle.cmat.eps, coreshellparticle.smat.eps
     particle_radius = coreshellparticle.radius

@@ -22,7 +22,6 @@ if __name__ == "__main__":
     # print("S1 energy:", s1_e_CdS_AlSb)
     # ke, qe = CdS_AlSb.calculate_wavevectors()
     # print("Electron wavevector in core and shell:", ke, qe)
-
     """ x, dx = np.linspace(1e-14, 10, 1000, retstep=True)
     wf =  CdS_AlSb.plot_electron_wavefunction(x, ke, qe)
     plt.plot(x, wf * wf)

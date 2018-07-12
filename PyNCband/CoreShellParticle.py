@@ -29,7 +29,7 @@ class CoreShellParticle:
         self.radius = core_width + shell_width
         self.type_one = self.is_type_one()
         self.type_two, self.h_e, self.e_h = self.is_type_two()
-        self.kvectors_valid: bool = False # This is an observer variable so we don't have to recalculate
+        self.kvectors_valid: bool = False  # This is an observer variable so we don't have to recalculate
         self.ue = np.abs(self.cmat.cbe - self.smat.cbe)
         self.uh = np.abs(self.cmat.vbe - self.smat.vbe)
 
@@ -37,7 +37,7 @@ class CoreShellParticle:
     def is_type_one(self):
         return (self.cmat.vbe > self.smat.vbe) and (self.cmat.cbe < self.smat.cbe)
 
-    def is_type_two (self):
+    def is_type_two(self):
         """"A type two QD has both conduction and valence band edges of its core either higher or lower than the
         corresponding band edges of the shell."""
         core_higher = (self.cmat.vbe > self.smat.vbe) and (
@@ -75,11 +75,11 @@ class CoreShellParticle:
             )
 
     # This method can currently only find cases where the energy of the lowest state is above the poetntial step.
-    def calculate_s1_energies(self, bounds=(), resolution=1000) -> Tuple[float, float]:
+    def calculate_s1_energies(self, bounds=(), resolution=10000) -> Tuple[float, float]:
 
-        lower_bound_e = self.ue + 1e-14
+        lower_bound_e = 1e-14
         upper_bound_e = 10 * self.ue
-        lower_bound_h = self.uh + 1e-14
+        lower_bound_h = 1e-14
         upper_bound_h = 10 * self.uh
 
         x: np.ndarray = np.linspace(lower_bound_e, upper_bound_e, resolution)
@@ -218,6 +218,7 @@ class CoreShellParticle:
             core_width = self.core_width
         """Minimum core width for localization of electron for a given shell width."""
         q1 = (2 * self.smat.m_h * self.uh) ** 0.5  # No 1/hbar because unitless.
+
         # print(q1)
 
         def min_shell_loc_from_core(h: float) -> float:
