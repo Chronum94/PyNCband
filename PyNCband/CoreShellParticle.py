@@ -8,6 +8,7 @@ from scipy.integrate import quad, dblquad
 from .Material import Material
 from .physicsfunctions import *
 
+from numba import jit
 # from functools import partial
 
 __all__ = ["CoreShellParticle"]
@@ -43,36 +44,35 @@ class CoreShellParticle:
         self.shell_width = x
         self.energies_valid = False
 
-    def calculate_wavevectors(self):
+
+    def calculate_wavevectors(
+        self
+    ) -> Tuple[floatcomplex, floatcomplex, floatcomplex, floatcomplex]:
         """Returns a tuple of the electron wavevectors in the core and the shell."""
         # energy_e, energy_h = None, None
-        if self.energies_valid:
-            energy_e, energy_h = self.s1_e, self.s1_h
-        else:
-            self.s1_e, self.s1_h = self.calculate_s1_energies()
-            energy_e, energy_h = self.s1_e, self.s1_h
-            self.energies_valid = True # This gets set to false when we change core/shell radius, etc.
 
+        energy_e, energy_h = self.calculate_s1_energies()
+        # This gets set to false when we change core/shell radius, etc.
 
         if self.e_h:
             return (
-                wavevector_from_energy(energy_e, self.cmat.m_e),
-                wavevector_from_energy(
+                wavenumber_from_energy(energy_e, self.cmat.m_e),
+                wavenumber_from_energy(
                     energy_e, self.smat.m_e, potential_offset=self.ue
                 ),
-                wavevector_from_energy(
+                wavenumber_from_energy(
                     energy_h, self.cmat.m_h, potential_offset=self.uh
                 ),
-                wavevector_from_energy(energy_h, self.smat.m_h),
+                wavenumber_from_energy(energy_h, self.smat.m_h),
             )
         elif self.h_e:
             return (
-                wavevector_from_energy(
+                wavenumber_from_energy(
                     energy_e, self.cmat.m_e, potential_offset=self.ue
                 ),
-                wavevector_from_energy(energy_e, self.smat.m_e),
-                wavevector_from_energy(energy_h, self.cmat.m_h),
-                wavevector_from_energy(
+                wavenumber_from_energy(energy_e, self.smat.m_e),
+                wavenumber_from_energy(energy_h, self.cmat.m_h),
+                wavenumber_from_energy(
                     energy_h, self.smat.m_h, potential_offset=self.uh
                 ),
             )
@@ -80,49 +80,50 @@ class CoreShellParticle:
     # This method can currently only find cases where the energy of the lowest state is above the poetntial step.
     def calculate_s1_energies(self, bounds=(), resolution=10000) -> Tuple[float, float]:
 
-        lower_bound_e = 1e-14
-        upper_bound_e = 10 * self.ue
-        lower_bound_h = 1e-14
-        upper_bound_h = 10 * self.uh
+        if self.energies_valid:
+            return self.s1_e, self.s1_h
+        else:
 
-        x: np.ndarray = np.linspace(lower_bound_e, upper_bound_e, resolution)
-        if bounds != ():
-            x = np.linspace(bounds[0], bounds[1], resolution)
-        ye = electron_eigenvalue_residual(x, self)
+            lower_bound_e = 1e-14
+            upper_bound_e = 50 * self.ue
+            lower_bound_h = 1e-14
+            upper_bound_h = 50 * self.uh
 
-        ye_signs = np.sign(ye)
-        ye_sign_change = np.diff(ye_signs)  # This array is one element shorter.
-        ye_neg2pos_change = np.argwhere(np.where(ye_sign_change > 0.5, 1, 0))
-        root_position = ye_neg2pos_change[0]
-        # print(*x[root_position:root_position + 2])
-        s1_electron_energy = brentq(
-            electron_eigenvalue_residual,
-            x[root_position],
-            x[root_position + 1],
-            args=(self,),
-        )
+            x: np.ndarray = np.linspace(lower_bound_e, upper_bound_e, resolution)
+            if bounds != ():
+                x = np.linspace(bounds[0], bounds[1], resolution)
+            ye = electron_eigenvalue_residual(x, self)
 
-        x = np.linspace(lower_bound_h, upper_bound_h, resolution)
-        if bounds != ():
-            x = np.linspace(bounds[2], bounds[3], resolution)
-        yh = hole_eigenvalue_residual(x, self)
-        yh_signs = np.sign(yh)
-        yh_sign_change = np.diff(yh_signs)  # This array is one element shorter.
-        yh_neg2pos_change = np.argwhere(np.where(yh_sign_change > 0.5, 1, 0))
-        root_position = yh_neg2pos_change[0]
-        # print(yh[root_position], yh[root_position + 1])
+            ye_signs = np.sign(ye)
+            ye_sign_change = np.diff(ye_signs)  # This array is one element shorter.
+            ye_neg2pos_change = np.argwhere(np.where(ye_sign_change > 0.5, 1, 0))
+            root_position = ye_neg2pos_change[0]
+            # print(*x[root_position:root_position + 2])
+            self.s1_e = brentq(
+                electron_eigenvalue_residual,
+                x[root_position],
+                x[root_position + 1],
+                args=(self,),
+            )
 
-        s1_hole_energy = brentq(
-            hole_eigenvalue_residual,
-            x[root_position],
-            x[root_position + 1],
-            args=(self,),
-        )
-        # print(s1_electron_energy)
-        # plt.plot(x, yh)
-        # plt.ylim(-10, 10)
-        # plt.show()
-        return s1_electron_energy, s1_hole_energy
+            x = np.linspace(lower_bound_h, upper_bound_h, resolution)
+            if bounds != ():
+                x = np.linspace(bounds[2], bounds[3], resolution)
+            yh = hole_eigenvalue_residual(x, self)
+            yh_signs = np.sign(yh)
+            yh_sign_change = np.diff(yh_signs)  # This array is one element shorter.
+            yh_neg2pos_change = np.argwhere(np.where(yh_sign_change > 0.5, 1, 0))
+            root_position = yh_neg2pos_change[0]
+            # print(yh[root_position], yh[root_position + 1])
+
+            self.s1_h = brentq(
+                hole_eigenvalue_residual,
+                x[root_position],
+                x[root_position + 1],
+                args=(self,),
+            )
+            self.energies_valid = True
+            return self.s1_e, self.s1_h
 
     def plot_electron_wavefunction(
         self, x, core_wavevector: float, shell_wavevector: float
@@ -158,17 +159,20 @@ class CoreShellParticle:
             np.sin(q_h * self.shell_width),
         )
         R, H = self.core_width, self.shell_width
-
+        core_denom = K_e * K_h * 2 * (k_h * k_h - k_e * k_e)
+        shell_denom = Q_e * Q_h * 2 * (q_h * q_h - q_e * q_e)
+        if abs(core_denom) < 1e-4 or abs(shell_denom) < 1e-4:
+            print("Yer a breakpoint, 'arry.")
         # The accompanying formula for these are in a Maxima file.
         # QDWavefunctionsAndIntegrals.wxmx
         core_integral = -(
             (k_h - k_e) * np.sin(R * (k_h + k_e))
             - (k_h + k_e) * np.sin(R * (k_h - k_e))
-        ) / (K_e * K_h * 2 * (k_h * k_h - k_e * k_e))
+        ) / core_denom
         shell_integral = -(
             (q_h - q_e) * np.sin(H * (q_h + q_e))
             - (q_h + q_e) * np.sin(H * (q_h - q_e))
-        ) / (Q_e * Q_h * 2 * (q_h * q_h - q_e * q_e))
+        ) / shell_denom
 
         return abs(core_integral + shell_integral) ** 2
 
@@ -192,10 +196,10 @@ class CoreShellParticle:
         return abs(overlap_integral_real[0] + 1j * overlap_integral_imag[0]) ** 2
 
     def print_e_wf_at_zero(self):
-        """"""
+        """Prints the wavefunction at 0."""
         print(
-            unnormalized_core_wavefunction(
-                1e-14, self.calculate_wavevectors()[0], self.core_width
+            _wavefunction(
+                0, self.calculate_wavevectors()[0], self.core_width
             )
         )
 

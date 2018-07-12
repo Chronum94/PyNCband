@@ -9,7 +9,7 @@ from PyNCband.CoreShellParticle import CoreShellParticle
 
 all_one_core = Material(1, -1, 1, 1, 1, "Ones")
 all_one_shell = Material(1, -0.5, 1, 1, 1, "Ones")
-eff_mass_test = Material(1, 1, 1, 0.5, 1, "HoleMassHalf")
+eff_mass_test = Material(1, -1, 0.5, 1, 1, "ElecMassHalf")
 
 coreshell_1 = CoreShellParticle(all_one_core, all_one_shell, 1., 1)
 coreshell_2 = CoreShellParticle(all_one_core, eff_mass_test, 3, 3)

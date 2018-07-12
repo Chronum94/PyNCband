@@ -12,7 +12,7 @@ if TYPE_CHECKING:
 __all__ = [
     "unnormalized_core_wavefunction",
     "unnormalized_shell_wavefunction",
-    "wavevector_from_energy",
+    "wavenumber_from_energy",
     "electron_eigenvalue_residual",
     "hole_eigenvalue_residual",
     "_x_residual_function",
@@ -21,6 +21,7 @@ __all__ = [
     "wavefunction",
     "make_coulomb_screening_operator",
     "make_interface_polarization_operator",
+    "floatcomplex",
 ]
 
 floatcomplex = Union[float, complex]
@@ -142,7 +143,7 @@ def _wavefunction(
 wavefunction = np.vectorize(_wavefunction, otypes=(np.complex128,))
 
 # @jit(nopython = True) # Jitting this requires type info for csqrt. need to figure that out.
-def wavevector_from_energy(
+def wavenumber_from_energy(
     energy: float, mass: float, potential_offset: float = 0
 ) -> floatcomplex:
     # There's a 1/hbar ** 2 factor under that square root.
@@ -150,7 +151,9 @@ def wavevector_from_energy(
     return csqrt(2 * mass * (energy - potential_offset))
 
 
-def electron_eigenvalue_residual(energy: floatarray, particle: "CoreShellParticle") -> float:
+def electron_eigenvalue_residual(
+    energy: floatarray, particle: "CoreShellParticle"
+) -> float:
     """This function returns the residual of the electron energy level eigenvalue equation. Used with root-finding
     methods to calculate the lowest energy state.
 
@@ -175,15 +178,15 @@ def electron_eigenvalue_residual(energy: floatarray, particle: "CoreShellParticl
         Nano Letters, 7(1), 108–115. https://doi.org/10.1021/nl0622404"""
     k_e, q_e = None, None
     if particle.e_h:
-        k_e = wavevector_from_energy(energy, particle.cmat.m_e)
-        q_e = wavevector_from_energy(
+        k_e = wavenumber_from_energy(energy, particle.cmat.m_e)
+        q_e = wavenumber_from_energy(
             energy, particle.smat.m_e, potential_offset=particle.ue
         )
     elif particle.h_e:
-        k_e = wavevector_from_energy(
+        k_e = wavenumber_from_energy(
             energy, particle.cmat.m_e, potential_offset=particle.ue
         )
-        q_e = wavevector_from_energy(energy, particle.smat.m_e)
+        q_e = wavenumber_from_energy(energy, particle.smat.m_e)
     core_x = k_e * particle.core_width
     shell_x = q_e * particle.shell_width
     core_width = particle.core_width
@@ -201,7 +204,9 @@ def electron_eigenvalue_residual(energy: floatarray, particle: "CoreShellParticl
     return _residual()
 
 
-def hole_eigenvalue_residual(energy: floatarray, particle: "CoreShellParticle") -> float:
+def hole_eigenvalue_residual(
+    energy: floatarray, particle: "CoreShellParticle"
+) -> float:
     """This function returns the residual of the hole energy level eigenvalue equation. Used with root-finding
     methods to calculate the lowest energy state.
 
@@ -226,15 +231,15 @@ def hole_eigenvalue_residual(energy: floatarray, particle: "CoreShellParticle") 
         Nano Letters, 7(1), 108–115. https://doi.org/10.1021/nl0622404"""
     k_h, q_h = None, None
     if particle.e_h:
-        k_h = wavevector_from_energy(energy, particle.cmat.m_e)
-        q_h = wavevector_from_energy(
+        k_h = wavenumber_from_energy(energy, particle.cmat.m_e)
+        q_h = wavenumber_from_energy(
             energy, particle.smat.m_e, potential_offset=particle.ue
         )
     elif particle.h_e:
-        k_h = wavevector_from_energy(
+        k_h = wavenumber_from_energy(
             energy, particle.cmat.m_e, potential_offset=particle.ue
         )
-        q_h = wavevector_from_energy(energy, particle.smat.m_e)
+        q_h = wavenumber_from_energy(energy, particle.smat.m_e)
     core_x = k_h * particle.core_width
     shell_x = q_h * particle.shell_width
     core_width = particle.core_width
@@ -250,6 +255,7 @@ def hole_eigenvalue_residual(energy: floatarray, particle: "CoreShellParticle") 
         )
 
     return _residual()
+
 
 @jit(nopython=True)
 def _x_residual_function(x: float, mass_in_core: float, mass_in_shell: float) -> float:
@@ -281,7 +287,9 @@ def make_coulomb_screening_operator(coreshellparticle: "CoreShellParticle") -> C
     return coulumb_screening_operator
 
 
-def make_interface_polarization_operator(coreshellparticle: "CoreShellParticle") -> Callable:
+def make_interface_polarization_operator(
+    coreshellparticle: "CoreShellParticle"
+) -> Callable:
     core_width = coreshellparticle.core_width
     core_eps, shell_eps = coreshellparticle.cmat.eps, coreshellparticle.smat.eps
     particle_radius = coreshellparticle.radius
