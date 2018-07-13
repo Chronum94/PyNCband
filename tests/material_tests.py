@@ -16,11 +16,11 @@ if __name__ == "__main__":
     assert AlSb_CdS.type_two, "AlSb/CdS is is a type 2 QD"
     assert AlSb_CdS.h_e, "AlSb/CdS should be h-e core-shell."
     print(CdS_AlSb.ue)
-    print(CdS_AlSb.calculate_wavevectors())
+    print(CdS_AlSb.calculate_wavenumbers())
     # print(CdS_AlSb.calculate_s1_energies())
     # s1_e_CdS_AlSb, s1_h_CdS_AlSb = CdS_AlSb.calculate_s1_energies()
     # print("S1 energy:", s1_e_CdS_AlSb)
-    # ke, qe = CdS_AlSb.calculate_wavevectors()
+    # ke, qe = CdS_AlSb.calculate_wavenumbers()
     # print("Electron wavevector in core and shell:", ke, qe)
     """ x, dx = np.linspace(1e-14, 10, 1000, retstep=True)
     wf =  CdS_AlSb.plot_electron_wavefunction(x, ke, qe)

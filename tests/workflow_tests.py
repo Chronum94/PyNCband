@@ -29,9 +29,12 @@ zz = np.zeros_like(xx)
 #         zz[i, j] = CdS_AlSb.analytical_overlap_integral()
 #         test.assert_approx_equal(zz[i, j], CdS_AlSb.numerical_overlap_integral())
 
-
+CdS_AlSb.set_core_width(1)
+CdS_AlSb.set_shell_width(1)
+print(CdS_AlSb.ue)
 for shellw in np.linspace(3, 100, 100):
-    print(CdS_AlSb.localization_electron_min_width())
+    print("Shell width:", shellw)
+    print(CdS_AlSb.localization_electron_min_width(shellw))
 
 # plt.imshow(zz)
 # plt.colorbar()

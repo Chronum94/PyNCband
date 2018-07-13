@@ -2,6 +2,10 @@ import numpy as np
 from numpy.lib.scimath import sqrt as csqrt
 from numba import jit, vectorize, float64, complex128
 
+from scipy.constants import hbar, e, m_e, epsilon_0 as eps0
+
+n_ = 1e-9
+
 from typing import Callable, Union, TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -144,11 +148,9 @@ wavefunction = np.vectorize(_wavefunction, otypes=(np.complex128,))
 
 # @jit(nopython = True) # Jitting this requires type info for csqrt. need to figure that out.
 def wavenumber_from_energy(
-    energy: float, mass: float, potential_offset: float = 0
+    energy: float, mass: float, potential_offset: float = 0,
 ) -> floatcomplex:
-    # There's a 1/hbar ** 2 factor under that square root.
-    # Omitting it because hbar is obviously 1.
-    return csqrt(2 * mass * (energy - potential_offset))
+    return csqrt(2 * mass * m_e * (energy - potential_offset)) / hbar
 
 
 def electron_eigenvalue_residual(
