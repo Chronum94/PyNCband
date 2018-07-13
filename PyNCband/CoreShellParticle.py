@@ -241,13 +241,13 @@ class CoreShellParticle:
         def min_core_loc_from_shell(r: float) -> float:
             return shell_width + m * r / (1 - m + 1 / _tanxdivx(k1 * r))
         if type(x1) == float:
-            print('x1:', x1, 'k1:', k1)
-            print('Low:', x1 / k1)
-            print('High:', np.pi / k1)
-            print('FLow:', min_core_loc_from_shell(x1 / k1))
-            print('FLow+:', min_core_loc_from_shell(x1 / k1 + 1e-4))
-            print('FHigh:', min_core_loc_from_shell(np.pi / k1))
-            print('FHigh-:', min_core_loc_from_shell(np.pi / k1 - 1e-14))
+            # print('x1:', x1, 'k1:', k1)
+            # print('Low:', x1 / k1)
+            # print('High:', np.pi / k1)
+            # print('FLow:', min_core_loc_from_shell(x1 / k1))
+            # print('FLow+:', min_core_loc_from_shell(x1 / k1 + 1e-4))
+            # print('FHigh:', min_core_loc_from_shell(np.pi / k1))
+            # print('FHigh-:', min_core_loc_from_shell(np.pi / k1 - 1e-14))
             result = brentq(min_core_loc_from_shell, x1 / k1 + 1e-10, np.pi / k1 - 1e-10)
 
             # Returning with proper scaling.
@@ -279,17 +279,17 @@ class CoreShellParticle:
     def coulomb_screening_energy(self, relative_tolerance: float = 1e-8):
         coulomb_screening_operator = make_coulomb_screening_operator(self)
 
-        k_e, q_e, k_h, q_h = self.calculate_wavenumbers()
+        k_e, q_e, k_h, q_h = self.calculate_wavenumbers() * n_
 
         # Electron/hole density functions.
         def edf(x):
             return (
-                abs(_wavefunction(x, k_e, q_e, self.core_width, self.shell_width)) ** 2
+                abs(_wavefunction(x, k_e, q_e, self.core_width / n_, self.shell_width / n_)) ** 2
             )
 
         def hdf(x):
             return (
-                abs(_wavefunction(x, k_h, q_h, self.core_width, self.shell_width)) ** 2
+                abs(_wavefunction(x, k_h, q_h, self.core_width / n_, self.shell_width / n_)) ** 2
             )
 
         coulomb_integrand = (
@@ -300,24 +300,25 @@ class CoreShellParticle:
             * coulomb_screening_operator(r1, r2)
         )
 
-        return dblquad(
-            coulomb_integrand, 0, self.radius, 0, self.radius, epsrel=relative_tolerance
-        )
+        return np.array(dblquad(
+            coulomb_integrand, 0, self.radius / n_, 0, self.radius / n_, epsrel=relative_tolerance
+        ))
+
 
     def interface_polarization_energy(self, relative_tolerance: float = 1e-8):
         interface_polarization_operator = make_interface_polarization_operator(self)
 
-        k_e, q_e, k_h, q_h = self.calculate_wavenumbers()
+        k_e, q_e, k_h, q_h = self.calculate_wavenumbers() * n_
 
         # Electron/hole density functions.
         def edf(x):
             return (
-                abs(_wavefunction(x, k_e, q_e, self.core_width, self.shell_width)) ** 2
+                abs(_wavefunction(x, k_e, q_e, self.core_width / n_, self.shell_width / n_)) ** 2
             )
 
         def hdf(x):
             return (
-                abs(_wavefunction(x, k_h, q_h, self.core_width, self.shell_width)) ** 2
+                abs(_wavefunction(x, k_h, q_h, self.core_width / n_, self.shell_width / n_)) ** 2
             )
 
         def polarization_integrand(r1, r2):
@@ -329,14 +330,14 @@ class CoreShellParticle:
                 * interface_polarization_operator(r1, r2)
             )
 
-        return dblquad(
+        return np.array(dblquad(
             polarization_integrand,
             0,
-            self.radius,
+            self.radius / n_,
             0,
-            self.radius,
+            self.radius / n_,
             epsrel=relative_tolerance,
-        )
+        )) * n_ ** 2
 
     # This is likely to get refactored later to return types.
     def _is_type_one(self):
