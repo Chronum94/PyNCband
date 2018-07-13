@@ -150,6 +150,8 @@ wavefunction = np.vectorize(_wavefunction, otypes=(np.complex128,))
 def wavenumber_from_energy(
     energy: float, mass: float, potential_offset: float = 0,
 ) -> floatcomplex:
+
+    # The energies supplied to this are already in Joules. Relax.
     return csqrt(2 * mass * m_e * (energy - potential_offset)) / hbar
 
 

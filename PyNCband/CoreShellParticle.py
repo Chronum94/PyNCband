@@ -183,6 +183,13 @@ class CoreShellParticle:
         return abs(core_integral + shell_integral) ** 2
 
     def numerical_overlap_integral(self):
+
+        # The wavenumbers and distances of integration have been scaled to order of unity.
+        # Analytically, they are the same without scaling.
+        # Numerically, vastly difference numbers make life very sad. Do NOT remove the scaling here.
+        # Changing it to a difference, appropriate scaling, is possible, but do not _remove_ it.
+        # TODO: One possible scaling is to take the inverse of the max wavenumber, then scale everything with that.
+        # Might be interesting to try out.
         k_e, q_e, k_h, q_h = self.calculate_wavenumbers() * n_
 
         def ewf(x):
@@ -213,8 +220,12 @@ class CoreShellParticle:
     # TODO: Implement branch for eh/he coreshells.
     def localization_electron_min_width(self, shell_width: float = None):
         """Minimum core width for localization of electron for a given shell width."""
+
+        # EVERYTHING IN THIS FUNCTION HAS BEEN SCALED WITH n_ = 1e-9. There are almost certainly better, more adaptive
+        # ways to scale. But for now, the nano- is our lord and saviour.
         if shell_width is None:
-            shell_width = self.shell_width
+            # Scaling to order unity.
+            shell_width = self.shell_width / n_
 
         m = self.cmat.m_e / self.smat.m_e
 
@@ -224,7 +235,8 @@ class CoreShellParticle:
         )
 
         # Same for this.
-        k1 = (2 * self.cmat.m_e * m_e * self.ue * e) ** 0.5 / hbar
+        # SCALED TO ORDER UNITY.
+        k1 = (2 * self.cmat.m_e * m_e * self.ue) ** 0.5 / hbar * n_
 
         def min_core_loc_from_shell(r: float) -> float:
             return shell_width + m * r / (1 - m + 1 / _tanxdivx(k1 * r))
@@ -233,20 +245,22 @@ class CoreShellParticle:
             print('Low:', x1 / k1)
             print('High:', np.pi / k1)
             print('FLow:', min_core_loc_from_shell(x1 / k1))
-            print('FLow+:', min_core_loc_from_shell(x1 / k1 + 1e-7 * n_))
+            print('FLow+:', min_core_loc_from_shell(x1 / k1 + 1e-4))
             print('FHigh:', min_core_loc_from_shell(np.pi / k1))
-            print('FHigh-:', min_core_loc_from_shell(np.pi / k1 - 1e-7 * n_))
-            # result = brentq(min_core_loc_from_shell, x1 / k1 + 1e-10, np.pi / k1 - 1e-10)
-            return 1# result
+            print('FHigh-:', min_core_loc_from_shell(np.pi / k1 - 1e-14))
+            result = brentq(min_core_loc_from_shell, x1 / k1 + 1e-10, np.pi / k1 - 1e-10)
+
+            # Returning with proper scaling.
+            return result * n_
         else:
             raise ValueError
 
     # TODO: Implement branch for eh/he coreshells.
     def localization_hole_min_radius(self, core_width: float = None):
         if core_width is None:
-            core_width = self.core_width
+            core_width = self.core_width / n_
         """Minimum core width for localization of electron for a given shell width."""
-        q1 = (2 * self.smat.m_h * m_e * self.uh * e) ** 0.5 / hbar
+        q1 = (2 * self.smat.m_h * m_e * self.uh) ** 0.5 / hbar * n_
 
         # print(q1)
 
@@ -258,7 +272,9 @@ class CoreShellParticle:
         # plt.show()
         result = brentq(min_shell_loc_from_core, np.pi / (2 * q1) + 1e-12, np.pi / q1)
         # print(min_shell_loc_from_core(np.pi / (2 * q1)), min_shell_loc_from_core(np.pi / q1))
-        return result
+
+        # Scaling back to SI.
+        return result * n_
 
     def coulomb_screening_energy(self, relative_tolerance: float = 1e-8):
         coulomb_screening_operator = make_coulomb_screening_operator(self)
