@@ -6,7 +6,7 @@ from scipy.constants import hbar, e, m_e, epsilon_0 as eps0
 
 n_ = 1e-9
 
-from typing import Callable, Union, TYPE_CHECKING
+from typing import Callable, Union, TYPE_CHECKING, Tuple
 
 if TYPE_CHECKING:
     from .CoreShellParticle import CoreShellParticle
@@ -21,11 +21,13 @@ __all__ = [
     "hole_eigenvalue_residual",
     "_x_residual_function",
     "_tanxdivx",
+    "tanxdivx",
     "_wavefunction",
     "wavefunction",
     "make_coulomb_screening_operator",
     "make_interface_polarization_operator",
     "floatcomplex",
+    "scan_and_bracket",
 ]
 
 floatcomplex = Union[float, complex]
@@ -148,7 +150,7 @@ wavefunction = np.vectorize(_wavefunction, otypes=(np.complex128,))
 
 # @jit(nopython = True) # Jitting this requires type info for csqrt. need to figure that out.
 def wavenumber_from_energy(
-    energy: float, mass: float, potential_offset: float = 0,
+    energy: float, mass: float, potential_offset: float = 0
 ) -> floatcomplex:
 
     # The energies supplied to this are already in Joules. Relax.
@@ -309,3 +311,18 @@ def make_interface_polarization_operator(
         return val
 
     return coulumb_screening_operator
+
+
+def scan_and_bracket(
+    f: Callable, lower_bound: float, upper_bound: float, resolution: int
+) -> Tuple[float, float]:
+    x = np.linspace(lower_bound, upper_bound, resolution)
+    y = f(x)
+
+    y_signs = np.sign(y)
+    y_sign_change = np.diff(y_signs)  # This array is one element shorter.
+
+    # The 0.5 thresholding is mostly arbitrary. A 0 would work just fine
+    y_neg2pos_change = np.argwhere(np.where(y_sign_change > 0.5, 1, 0))
+    root_position = y_neg2pos_change[0]
+    return x[root_position], x[root_position + 1]
