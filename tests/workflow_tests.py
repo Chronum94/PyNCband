@@ -37,9 +37,10 @@ zz = np.zeros_like(xx)
 CdS_AlSb.set_core_width(1)
 CdS_AlSb.set_shell_width(1)
 print(CdS_AlSb.ue / e)
-for shellw in np.linspace(0.1, 40, 10):
-    print("Shell width:", shellw)
-    print(CdS_AlSb.localization_electron_min_width(shellw) / n_, '\n')
+for shellw in np.linspace(0.1, 40, 100):
+    print("Width:", shellw)
+    print('Coreloc:', CdS_AlSb.localization_electron_min_width(shellw) / n_,)
+    print('Shellloc:', CdS_AlSb.localization_hole_min_width(shellw) / n_, '\n')
 
 # plt.imshow(zz)
 # plt.colorbar()

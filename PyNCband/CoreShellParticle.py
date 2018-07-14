@@ -225,39 +225,49 @@ class CoreShellParticle:
         # ways to scale. But for now, the nano- is our lord and saviour.
         if shell_width is None:
             # Scaling to order unity.
-            shell_width = self.shell_width
+            shell_width = self.shell_width / n_
 
         m = self.cmat.m_e / self.smat.m_e
 
         # This could use a cached value. This does not change.
+        # In the Piryatinski 2007 paper, this is used to set a lower bound on the core radius search bracket.
+        # However, I've noticed that this lower bracket often fails. Need to look more into why.
         x1 = brentq(
-            _x_residual_function, 0, np.pi - 1e-10, args=(self.cmat.m_e, self.smat.m_e)
+            _x_residual_function, -np.pi + 1e-10, 0, args=(self.cmat.m_e, self.smat.m_e)
         )
 
         # Same for this.
         # SCALED TO ORDER UNITY.
-        k1 = (2 * self.cmat.m_e * m_e * self.ue) ** 0.5 / hbar
-        print('k1', k1, 'x1', x1)
+        k1 = (2 * self.cmat.m_e * m_e * self.ue) ** 0.5 / hbar * n_
+        # print('k1', k1, 'x1', x1)
         def min_core_loc_from_shell(r: float) -> float:
             return shell_width + m * r / (1 - m + 1 / tanxdivx(k1 * r))
 
         if type(x1) == float:
             # print('x1:', x1, 'k1:', k1)
-            print('Low:', x1 / k1)
-            print('High:', np.pi / k1)
-            print('m-ratio:', m)
-            print("FLow:", min_core_loc_from_shell(x1 / k1))
-            # print('FLow+:', min_core_loc_from_shell(x1 / k1 + 1e-4))
-            print("FHigh:", min_core_loc_from_shell(np.pi / k1))
+            # print('m-ratio:', m)
+
             # print('FHigh-:', min_core_loc_from_shell(np.pi / k1 - 1e-4))
             lower_bound, upper_bound = x1 / k1, np.pi / k1
+            # print('Low:', lower_bound)
+            # print('High:', upper_bound)
+            # print("FLow:", min_core_loc_from_shell(lower_bound))
+            # print("FHigh:", min_core_loc_from_shell(upper_bound))
             # plt.plot(min_core_loc_from_shell(np.linspace(lower_bound, upper_bound, 1000)))
+
+            # This is the fallback for the case of where the sign doesn't change, and we have to drop the lower
+            # limit to 0.
             if min_core_loc_from_shell(lower_bound) * min_core_loc_from_shell(upper_bound) > 0: # No sign change.
                 # plt.plot(min_core_loc_from_shell(np.linspace(lower_bound, upper_bound, 1000)))
                 # plt.show()
 
                 # TODO: This lower bound does not agree with the paper. Need to figure this garbage out.
-                lower_bound, upper_bound = scan_and_bracket(min_core_loc_from_shell, 1e-10, upper_bound, 10000)
+                lower_bound, upper_bound = scan_and_bracket(min_core_loc_from_shell, 1e-12, upper_bound, 10000)
+                # print('FALLBACKLOW:', lower_bound)
+                # print('FALLBACKHIGH:', upper_bound)
+                # print("FBFLOW:", min_core_loc_from_shell(lower_bound))
+                # print('FLow+:', min_core_loc_from_shell(x1 / k1 + 1e-4))
+                # print("FBFHIGH:", min_core_loc_from_shell(upper_bound))
 
             result = brentq(
                 min_core_loc_from_shell, lower_bound, upper_bound
@@ -270,23 +280,34 @@ class CoreShellParticle:
 
     # TODO: Implement branch for eh/he coreshells.
     def localization_hole_min_width(self, core_width: float = None):
-        if core_width is None:
-            core_width = self.core_width / n_
         """Minimum core width for localization of electron for a given shell width."""
+
+        # EVERYTHING IN THIS FUNCTION HAS BEEN SCALED WITH n_ = 1e-9. There are almost certainly better, more adaptive
+        # ways to scale. But for now, the nano- is our lord and saviour.
+        if core_width is None:
+            # Scaling to order unity.
+            core_width = self.core_width / n_
+
+        # This could use a cached value. This does not change.
+        # In the Piryatinski 2007 paper, this is used to set a lower bound on the core radius search bracket.
+        # However, I've noticed that this lower bracket often fails. Need to look more into why.
+
+        # Same for this.
+        # SCALED TO ORDER UNITY.
         q1 = (2 * self.smat.m_h * m_e * self.uh) ** 0.5 / hbar * n_
-
-        # print(q1)
-
+        # print('k1', k1, 'x1', x1)
         def min_shell_loc_from_core(h: float) -> float:
             return core_width + np.tan(q1 * h) * q1
 
-        # h = np.linspace(np.pi/ (2 * q1) + 0.1, np.pi / q1, 100)
-        # plt.plot(h, min_shell_loc_from_core(h))
-        # plt.show()
-        result = brentq(min_shell_loc_from_core, np.pi / (2 * q1) + 1e-12, np.pi / q1)
-        # print(min_shell_loc_from_core(np.pi / (2 * q1)), min_shell_loc_from_core(np.pi / q1))
+                # print('FALLBACKLOW:', lower_bound)
+                # print('FALLBACKHIGH:', upper_bound)
+                # print("FBFLOW:", min_core_loc_from_shell(lower_bound))
+                # print('FLow+:', min_core_loc_from_shell(x1 / k1 + 1e-4))
+                # print("FBFHIGH:", min_core_loc_from_shell(upper_bound))
 
-        # Scaling back to SI.
+        result = brentq(
+                min_shell_loc_from_core, np.pi / (2 * q1) + 1e-13, np.pi  / q1 - 1e-13,
+            )
         return result * n_
 
     def coulomb_screening_energy(self, relative_tolerance: float = 1e-3):
