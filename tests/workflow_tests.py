@@ -6,9 +6,7 @@ from scipy.constants import e
 
 from PyNCband.Material import Material
 from PyNCband.CoreShellParticle import CoreShellParticle
-
-
-n_ = 1e-9
+from PyNCband.scaling import n_
 
 AlSb = Material(1.6, -2.9, 0.12, 0.98, 2, "AlSb")
 CdS = Material(2.4, -3.5, 0.21, 0.8, 3, "CdS")
@@ -37,10 +35,12 @@ zz = np.zeros_like(xx)
 CdS_AlSb.set_core_width(1)
 CdS_AlSb.set_shell_width(1)
 print(CdS_AlSb.ue / e)
-for shellw in np.linspace(0.1, 40, 100):
-    print("Width:", shellw)
-    print('Coreloc:', CdS_AlSb.localization_electron_min_width(shellw) / n_,)
-    print('Shellloc:', CdS_AlSb.localization_hole_min_width(shellw) / n_, '\n')
+for shellw in np.linspace(0.1, 0.4, 2):
+    # print("Width:", shellw)
+    # print("Coreloc:", CdS_AlSb.localization_electron_core(shellw))
+    # print("Shellloc:", CdS_AlSb.localization_hole_shell(shellw))
+    print("Wfintegralc:", CdS_AlSb.coulomb_screening_energy(), "\n")
+    # print(AlSb_CdS.localization_electron_core())
 
 # plt.imshow(zz)
 # plt.colorbar()

@@ -1,0 +1,2 @@
+class LocalizationNotPossibleError(ValueError):
+    pass

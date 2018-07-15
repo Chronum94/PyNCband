@@ -24,6 +24,7 @@ __all__ = [
     "tanxdivx",
     "_wavefunction",
     "wavefunction",
+    "_densityfunction",
     "make_coulomb_screening_operator",
     "make_interface_polarization_operator",
     "floatcomplex",
@@ -144,9 +145,13 @@ def _wavefunction(
     else:
         return 0
 
-
 # numba.vectorize might be faster, but requires significant refactoring.
 wavefunction = np.vectorize(_wavefunction, otypes=(np.complex128,))
+
+@jit(nopython=True)
+def _densityfunction(r: float, k: floatcomplex, q: floatcomplex, core_width: float, shell_width: float) -> float:
+    return abs(_wavefunction(r, k, q, core_width, shell_width)) ** 2
+
 
 # @jit(nopython = True) # Jitting this requires type info for csqrt. need to figure that out.
 def wavenumber_from_energy(
@@ -275,42 +280,46 @@ def _x_residual_function(x: float, mass_in_core: float, mass_in_shell: float) ->
 
 
 def make_coulomb_screening_operator(coreshellparticle: "CoreShellParticle") -> Callable:
-    core_width = coreshellparticle.core_width
+
+    # Scaling lengths to nm.
+    core_width = coreshellparticle.core_width / n_
     core_eps, shell_eps = coreshellparticle.cmat.eps, coreshellparticle.smat.eps
 
     @jit(nopython=True)
-    def coulumb_screening_operator(r_a: float, r_b: float) -> float:
+    def coulomb_screening_operator(r_a: float, r_b: float) -> float:
         rmax = max(r_a, r_b)
         r_c = core_width
         taz = 0.5  # Theta at zero, theta being step function.
         val = -_heaviside(r_c - r_a, taz) * _heaviside(r_c - r_b, taz) / (
-            rmax * core_eps
+            rmax * core_eps * eps0
         ) - (_heaviside(r_a - r_c, taz) + _heaviside(r_b - r_c, taz)) / (
-            2 * rmax * shell_eps
+            2 * rmax * shell_eps * eps0
         )
-        return val
+        return val * e / n_ # Scaling to eV and meters.
 
-    return coulumb_screening_operator
+    return coulomb_screening_operator
 
 
 def make_interface_polarization_operator(
     coreshellparticle: "CoreShellParticle"
 ) -> Callable:
-    core_width = coreshellparticle.core_width
+
+    # Scaling lengths to nm units.
+    core_width = coreshellparticle.core_width / n_
     core_eps, shell_eps = coreshellparticle.cmat.eps, coreshellparticle.smat.eps
-    particle_radius = coreshellparticle.radius
+    particle_radius = coreshellparticle.radius / n_
 
     @jit(nopython=True)
-    def coulumb_screening_operator(r_a: float, r_b: float) -> float:
+    def interface_polarization_operator(r_a: float, r_b: float) -> float:
         r_c = core_width
         r_p = particle_radius
         taz = 0.5  # Theta at zero, theta being step function.
-        val = -_heaviside(r_c - r_a, taz) * _heaviside(r_c - r_b, taz) * (
+        val = - _heaviside(r_c - r_a, taz) * _heaviside(r_c - r_b, taz) * (
             core_eps / shell_eps - 1
         ) / (r_c * core_eps) - (shell_eps - 1) / (2 * r_p * shell_eps)
-        return val
+        return val * e / (n_ * eps0) # Scaling with physical quantities.
 
-    return coulumb_screening_operator
+    return interface_polarization_operator
 
 
 def scan_and_bracket(
