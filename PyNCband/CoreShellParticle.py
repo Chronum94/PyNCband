@@ -42,9 +42,9 @@ class CoreShellParticle:
         # I'll see if we need to scale these here. If all our calculations use scaled lengths,
         # we can simply work with nanometers.
 
-        self.core_width = core_width * n_
-        self.shell_width = shell_width * n_
-        self.radius = (core_width + shell_width) * n_
+        self.core_width = core_width
+        self.shell_width = shell_width
+        self.radius = core_width + shell_width
         self.type_one = self._is_type_one()
 
         # Need to refactor this method/
@@ -66,15 +66,35 @@ class CoreShellParticle:
         )
 
     def set_core_width(self, x):
+        """
+
+        Parameters
+        ----------
+        x : float, nanometers
+
+        Returns
+        -------
+
+        """
         self.radius -= self.core_width
-        self.core_width = x * n_
+        self.core_width = x
         self.radius += self.core_width
         self.energies_valid = False
         self.norm_valid = False
 
     def set_shell_width(self, x):
+        """
+
+        Parameters
+        ----------
+        x : float, nanometers
+
+        Returns
+        -------
+
+        """
         self.radius -= self.shell_width
-        self.shell_width = x * n_
+        self.shell_width = x
         self.radius += self.shell_width
         self.energies_valid = False
         self.norm_valid = False
@@ -88,7 +108,7 @@ class CoreShellParticle:
 
         Returns
         -------
-
+        Tuples(float, float, float, float) : Wavenumbers in 1 / m.
         """
         # energy_e, energy_h = None, None
 
@@ -124,7 +144,7 @@ class CoreShellParticle:
             )
 
     # This method can currently only find cases where the energy of the lowest state is above the potential step.
-    def calculate_s1_energies(self, bounds=(), resolution=1000) -> Tuple[float, float]:
+    def calculate_s1_energies(self, bounds=(), resolution=10000) -> Tuple[float, float]:
         """Calculates eigenenergies of the S1 exciton state in Joules.
 
         Parameters
@@ -201,7 +221,7 @@ class CoreShellParticle:
         -------
 
         """
-        k_e, q_e, k_h, q_h = self.calculate_wavenumbers()
+        k_e, q_e, k_h, q_h = self.calculate_wavenumbers() * n_
         K_e, Q_e, K_h, Q_h = (
             np.sin(k_e * self.core_width),
             np.sin(q_e * self.shell_width),
@@ -253,14 +273,10 @@ class CoreShellParticle:
         norm_e, norm_h = self._normalization()
 
         def ewf(x):
-            return wavefunction(
-                x, k_e, q_e, self.core_width / n_, self.shell_width / n_
-            )
+            return wavefunction(x, k_e, q_e, self.core_width, self.shell_width)
 
         def hwf(x):
-            return wavefunction(
-                x, k_h, q_h, self.core_width / n_, self.shell_width / n_
-            )
+            return wavefunction(x, k_h, q_h, self.core_width, self.shell_width)
 
         def overlap_integrand_real(x):
             return np.real(x * x * ewf(x) * hwf(x))
@@ -268,8 +284,8 @@ class CoreShellParticle:
         def overlap_integrand_imag(x):
             return np.imag(x * x * ewf(x) * hwf(x))
 
-        overlap_integral_real = quad(overlap_integrand_real, 0, self.radius / n_)
-        overlap_integral_imag = quad(overlap_integrand_imag, 0, self.radius / n_)
+        overlap_integral_real = quad(overlap_integrand_real, 0, self.radius)
+        overlap_integral_imag = quad(overlap_integrand_imag, 0, self.radius)
         # Return both the answer and order-of-magnitude of error.
         return (
             abs(
@@ -277,9 +293,8 @@ class CoreShellParticle:
                 * norm_e
                 * norm_h
             )
-            ** 2
-            * n_ ** 2,
-            (overlap_integral_imag[1] + overlap_integral_real[1]) ** 2 * n_ ** 2,
+            ** 2,
+            (overlap_integral_imag[1] + overlap_integral_real[1]) ** 2,
         )
 
     def print_e_wf_at_zero(self):
@@ -309,7 +324,7 @@ class CoreShellParticle:
         # ways to scale. But for now, the nano- is our lord and saviour.
         if shell_width is None:
             # Scaling to order unity.
-            shell_width = self.shell_width / n_
+            shell_width = self.shell_width
 
         m = self.cmat.m_e / self.smat.m_e
 
@@ -390,7 +405,7 @@ class CoreShellParticle:
         # ways to scale. But for now, the nano- is our lord and saviour.
         if core_width is None:
             # Scaling to order unity.
-            core_width = self.core_width / n_
+            core_width = self.core_width
 
         # This could use a cached value. This does not change.
         # In the Piryatinski 2007 paper, this is used to set a lower bound on the core radius search bracket.
@@ -414,7 +429,7 @@ class CoreShellParticle:
         )
         return result
 
-    def coulomb_screening_energy(self, relative_tolerance: float = 1e-8):
+    def coulomb_screening_energy(self, relative_tolerance: float = 1e-4):
         """
 
         Parameters
@@ -433,24 +448,12 @@ class CoreShellParticle:
         # Electron/hole density functions.
         def edf(x):
             return (
-                abs(
-                    _wavefunction(
-                        x, k_e, q_e, self.core_width / n_, self.shell_width / n_
-                    )
-                )
-                ** 2
-                * norm_e
+                abs(_wavefunction(x, k_e, q_e, self.core_width, self.shell_width)) ** 2
             )
 
         def hdf(x):
             return (
-                abs(
-                    _wavefunction(
-                        x, k_h, q_h, self.core_width / n_, self.shell_width / n_
-                    )
-                )
-                ** 2
-                * norm_h
+                abs(_wavefunction(x, k_h, q_h, self.core_width, self.shell_width)) ** 2
             )
 
         coulomb_integrand = (
@@ -466,39 +469,28 @@ class CoreShellParticle:
             dblquad(
                 coulomb_integrand,
                 0,
-                self.radius / n_,
+                self.radius,
                 0,
-                self.radius / n_,
+                self.radius,
                 epsrel=relative_tolerance,
             )
-        )
+        ) * norm_e * norm_h
 
-    def interface_polarization_energy(self, relative_tolerance: float = 1e-8):
+    def interface_polarization_energy(self, relative_tolerance: float = 1e-4):
         interface_polarization_operator = make_interface_polarization_operator(self)
 
         k_e, q_e, k_h, q_h = self.calculate_wavenumbers() * n_
         norm_e, norm_h = self._normalization()
+        print("L484: norms", norm_e, norm_e)
         # Electron/hole density functions.
         def edf(x):
             return (
-                abs(
-                    _wavefunction(
-                        x, k_e, q_e, self.core_width / n_, self.shell_width / n_
-                    )
-                )
-                ** 2
-                * norm_e
+                abs(_wavefunction(x, k_e, q_e, self.core_width, self.shell_width)) ** 2
             )
 
         def hdf(x):
             return (
-                abs(
-                    _wavefunction(
-                        x, k_h, q_h, self.core_width / n_, self.shell_width / n_
-                    )
-                )
-                ** 2
-                * norm_h
+                abs(_wavefunction(x, k_h, q_h, self.core_width, self.shell_width)) ** 2
             )
 
         def polarization_integrand(r1, r2):
@@ -509,17 +501,17 @@ class CoreShellParticle:
                 * hdf(r2)
                 * interface_polarization_operator(r1, r2)
             )
-
+        print('L504, wnums', k_e, q_e, k_h, q_h)
         return np.array(
             dblquad(
                 polarization_integrand,
                 0,
-                self.radius / n_,
+                self.radius,
                 0,
-                self.radius / n_,
+                self.radius,
                 epsrel=relative_tolerance,
             )
-        )
+        ) * norm_e * norm_h
 
     # This is likely to get refactored later to return types.
     def _is_type_one(self):
@@ -543,18 +535,16 @@ class CoreShellParticle:
 
         else:
             k_e, q_e, k_h, q_h = self.calculate_wavenumbers() * n_
-            print(k_h)
+            # print(k_h)
             electron_density_integral = (
                 4
                 * np.pi
                 * quad(
                     lambda x: x
                     * x
-                    * _densityfunction(
-                        x, k_e, q_e, self.core_width / n_, self.shell_width / n_
-                    ),
+                    * _densityfunction(x, k_e, q_e, self.core_width, self.shell_width),
                     0,
-                    self.radius / n_,
+                    self.radius,
                 )[0]
             )
             hole_density_integral = (
@@ -563,11 +553,9 @@ class CoreShellParticle:
                 * quad(
                     lambda x: x
                     * x
-                    * _densityfunction(
-                        x, k_h, q_h, self.core_width / n_, self.shell_width / n_
-                    ),
+                    * _densityfunction(x, k_h, q_h, self.core_width, self.shell_width),
                     0,
-                    self.radius / n_,
+                    self.radius,
                 )[0]
             )
 

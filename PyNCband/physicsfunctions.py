@@ -1,10 +1,12 @@
+from cmath import tan
+
 import numpy as np
 from numpy.lib.scimath import sqrt as csqrt
 from numba import jit, vectorize, float64, complex128
 
 from scipy.constants import hbar, e, m_e, epsilon_0 as eps0
 
-n_ = 1e-9
+from .scaling import n_
 
 from typing import Callable, Union, TYPE_CHECKING, Tuple
 
@@ -48,12 +50,12 @@ def _heaviside(x1: float, x2: float) -> float:
 # @vectorize(nopython=True)
 @jit(["float64(float64)", "complex128(complex128)"], nopython=True)
 def _tanxdivx(x: floatcomplex) -> floatcomplex:
-    xsq = x ** 2
+    xsq = abs(x) ** 2
     # A simple 2nd order Taylor expansion will be accurate enough this close to 0.
     if abs(x) < 1e-13:
         return 1 - xsq / 2
     else:
-        return np.tan(x) / x
+        return (tan(x) / x).real
 
 
 tanxdivx = np.vectorize(_tanxdivx)  # np.vectorize(_tanxdivx, otypes=(np.complex128,))
@@ -170,6 +172,18 @@ def _densityfunction(
 def wavenumber_from_energy(
     energy: float, mass: float, potential_offset: float = 0
 ) -> floatcomplex:
+    """
+
+    Parameters
+    ----------
+    energy : float, Joules
+    mass : float, electron-masses
+    potential_offset : float, Joules
+
+    Returns
+    -------
+
+    """
 
     # The energies supplied to this are already in Joules. Relax.
     # TODO: Convert this to hbar in eV-s, then energies in eV.
@@ -206,30 +220,47 @@ def electron_eigenvalue_residual(
     # if type(energy) is not float:
     #     print('Electron residual energies of order:', energy[-1])
     if particle.e_h:
-        k_e = wavenumber_from_energy(energy, particle.cmat.m_e)
-        q_e = wavenumber_from_energy(
-            energy, particle.smat.m_e, potential_offset=particle.ue
+        k_e = wavenumber_from_energy(energy, particle.cmat.m_e) * n_
+        q_e = (
+            wavenumber_from_energy(
+                energy, particle.smat.m_e, potential_offset=particle.ue
+            )
+            * n_
         )
     elif particle.h_e:
-        k_e = wavenumber_from_energy(
-            energy, particle.cmat.m_e, potential_offset=particle.ue
+        k_e = (
+            wavenumber_from_energy(
+                energy, particle.cmat.m_e, potential_offset=particle.ue
+            )
+            * n_
         )
-        q_e = wavenumber_from_energy(energy, particle.smat.m_e)
+        q_e = wavenumber_from_energy(energy, particle.smat.m_e) * n_
     core_x = k_e * particle.core_width
     shell_x = q_e * particle.shell_width
     core_width = particle.core_width
     shell_width = particle.shell_width
     mass_ratio = particle.smat.m_e / particle.cmat.m_e
 
-    # @jit(nopython = True)
-    def _residual():
+    # shelltan = 1 / tanxdivx(shell_x)
+    # coretan = 1 / tanxdivx(core_x)
+    # if type(shelltan) not in [np.float64, np.complex128]:
+    #     a = max(np.imag(shell_x))
+    #     b = max(np.imag(core_x))
+    # print("Something large:", np.any(np.imag(shell_x) > 1e4))
+    # print("Something large:", np.any(np.imag(core_x) > 1e4))
+    if type(core_x) in [np.float64, np.complex128]:
+        return np.real(
+            (1 - 1 / _tanxdivx(core_x)) * mass_ratio
+            - 1
+            - 1 / _tanxdivx(shell_x) * core_width / shell_width
+        )
+    else:
+        a = 1
         return np.real(
             (1 - 1 / tanxdivx(core_x)) * mass_ratio
             - 1
             - 1 / tanxdivx(shell_x) * core_width / shell_width
         )
-
-    return _residual()
 
 
 def hole_eigenvalue_residual(
@@ -259,30 +290,40 @@ def hole_eigenvalue_residual(
         Nano Letters, 7(1), 108–115. https://doi.org/10.1021/nl0622404"""
     k_h, q_h = None, None
     if particle.e_h:
-        k_h = wavenumber_from_energy(energy, particle.cmat.m_e)
-        q_h = wavenumber_from_energy(
-            energy, particle.smat.m_e, potential_offset=particle.ue
+        k_h = wavenumber_from_energy(energy, particle.cmat.m_e) * n_
+        q_h = (
+            wavenumber_from_energy(
+                energy, particle.smat.m_e, potential_offset=particle.ue
+            )
+            * n_
         )
     elif particle.h_e:
-        k_h = wavenumber_from_energy(
-            energy, particle.cmat.m_e, potential_offset=particle.ue
+        k_h = (
+            wavenumber_from_energy(
+                energy, particle.cmat.m_e, potential_offset=particle.ue
+            )
+            * n_
         )
-        q_h = wavenumber_from_energy(energy, particle.smat.m_e)
+        q_h = wavenumber_from_energy(energy, particle.smat.m_e) * n_
     core_x = k_h * particle.core_width
     shell_x = q_h * particle.shell_width
     core_width = particle.core_width
     shell_width = particle.shell_width
     mass_ratio = particle.smat.m_h / particle.cmat.m_h
 
-    # @jit(nopython = True)
-    def _residual():
+    if type(core_x) in [np.float64, np.complex128]:
+        return np.real(
+            (1 - 1 / _tanxdivx(core_x)) * mass_ratio
+            - 1
+            - 1 / _tanxdivx(shell_x) * core_width / shell_width
+        )
+    else:
+        a = 1
         return np.real(
             (1 - 1 / tanxdivx(core_x)) * mass_ratio
             - 1
             - 1 / tanxdivx(shell_x) * core_width / shell_width
         )
-
-    return _residual()
 
 
 @jit(nopython=True)
@@ -299,7 +340,7 @@ def _x_residual_function(x: float, mass_in_core: float, mass_in_shell: float) ->
 def make_coulomb_screening_operator(coreshellparticle: "CoreShellParticle") -> Callable:
 
     # Scaling lengths to nm.
-    core_width = coreshellparticle.core_width / n_
+    core_width = coreshellparticle.core_width
     core_eps, shell_eps = coreshellparticle.cmat.eps, coreshellparticle.smat.eps
 
     @jit(nopython=True)
@@ -308,11 +349,11 @@ def make_coulomb_screening_operator(coreshellparticle: "CoreShellParticle") -> C
         r_c = core_width
         taz = 0.5  # Theta at zero, theta being step function.
         val = -_heaviside(r_c - r_a, taz) * _heaviside(r_c - r_b, taz) / (
-            rmax * core_eps * eps0
+            rmax * core_eps
         ) - (_heaviside(r_a - r_c, taz) + _heaviside(r_b - r_c, taz)) / (
-            2 * rmax * shell_eps * eps0
+            2 * rmax * shell_eps
         )
-        return val * e / n_  # Scaling to eV and meters.
+        return val * e / (n_ * eps0)  # Scaling to eV and meters.
 
     return coulomb_screening_operator
 
@@ -322,9 +363,9 @@ def make_interface_polarization_operator(
 ) -> Callable:
 
     # Scaling lengths to nm units.
-    core_width = coreshellparticle.core_width / n_
+    core_width = coreshellparticle.core_width
     core_eps, shell_eps = coreshellparticle.cmat.eps, coreshellparticle.smat.eps
-    particle_radius = coreshellparticle.radius / n_
+    particle_radius = coreshellparticle.radius
 
     @jit(nopython=True)
     def interface_polarization_operator(r_a: float, r_b: float) -> float:
