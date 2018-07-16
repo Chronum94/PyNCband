@@ -35,11 +35,12 @@ zz = np.zeros_like(xx)
 CdS_AlSb.set_core_width(1)
 CdS_AlSb.set_shell_width(1)
 print(CdS_AlSb.ue / e)
-for shellw in np.linspace(0.1, 0.4, 2):
+for shellw in np.linspace(0.1, 3, 2):
     # print("Width:", shellw)
     # print("Coreloc:", CdS_AlSb.localization_electron_core(shellw))
     # print("Shellloc:", CdS_AlSb.localization_hole_shell(shellw))
-    print("Wfintegralc:", CdS_AlSb.coulomb_screening_energy(), "\n")
+    print("CE:", CdS_AlSb.coulomb_screening_energy())
+    print("PE:", CdS_AlSb.interface_polarization_energy(), "\n")
     # print(AlSb_CdS.localization_electron_core())
 
 # plt.imshow(zz)
