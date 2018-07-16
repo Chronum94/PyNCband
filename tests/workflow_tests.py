@@ -23,19 +23,11 @@ x = np.linspace(1, 2, 10)
 xx, yy = np.meshgrid(x, x)
 zz = np.zeros_like(xx)
 
-# @profile
 
-# for i, cw in enumerate(x):
-#     for j, sw in enumerate(x):
-#         CdS_AlSb.set_core_width(cw)
-#         CdS_AlSb.set_shell_width(sw)
-#         zz[i, j] = CdS_AlSb.analytical_overlap_integral()
-#         test.assert_approx_equal(zz[i, j], CdS_AlSb.numerical_overlap_integral())
-
-CdS_AlSb.set_core_width(2)
-CdS_AlSb.set_shell_width(4)
-print(CdS_AlSb.ue / e)
-for shellw in np.linspace(4.01, 4.03, 3):
+CdS_AlSb.set_core_width(5)
+# CdS_AlSb.set_shell_width(4)
+print("CBE step in eV:", CdS_AlSb.ue / e)
+for shellw in np.linspace(5.01, 5.05, 2):
     # print("Width:", shellw)
     # print("Coreloc:", CdS_AlSb.localization_electron_core(shellw))
     # print("Shellloc:", CdS_AlSb.localization_hole_shell(shellw))
@@ -46,8 +38,9 @@ for shellw in np.linspace(4.01, 4.03, 3):
     print("EG", energies)
     print("CE:", coulomb_energy)
     print("PE:", polarization_energy)
-    print("BG:", CdS_AlSb.bandgap)
-    print("ExcEnergy:", CdS_AlSb.bandgap + np.sum(energies) + coulomb_energy[0] + polarization_energy[0])
+    print(CdS_AlSb.analytical_overlap_integral(), CdS_AlSb.numerical_overlap_integral())
+    # print("BG:", CdS_AlSb.bandgap)
+    # print("ExcEnergy:", CdS_AlSb.bandgap + np.sum(energies) + coulomb_energy[0] + polarization_energy[0])
     # print(AlSb_CdS.localization_electron_core())
 
 # plt.imshow(zz)

@@ -4,7 +4,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.optimize import brentq
 from scipy.integrate import quad, dblquad
-
 from scipy.constants import hbar, e, m_e
 
 
@@ -15,7 +14,6 @@ from .scaling import n_
 
 from numba import jit
 
-# from functools import partial
 
 __all__ = ["CoreShellParticle"]
 
@@ -41,8 +39,9 @@ class CoreShellParticle:
         self.cmat = core_material
         self.smat = shell_material
 
-        # I'll see if we need to scale these here. If all our calculations use scaled lengths, we can simply not scale
-        # them here.
+        # I'll see if we need to scale these here. If all our calculations use scaled lengths,
+        # we can simply work with nanometers.
+
         self.core_width = core_width * n_
         self.shell_width = shell_width * n_
         self.radius = (core_width + shell_width) * n_
@@ -62,7 +61,9 @@ class CoreShellParticle:
         self.ue = np.abs(self.cmat.cbe - self.smat.cbe) * e  # Converting to Joules.
         self.uh = np.abs(self.cmat.vbe - self.smat.vbe) * e
 
-        self.bandgap = min(self.cmat.cbe, self.smat.cbe) - max(self.cmat.vbe, self.smat.vbe)
+        self.bandgap = min(self.cmat.cbe, self.smat.cbe) - max(
+            self.cmat.vbe, self.smat.vbe
+        )
 
     def set_core_width(self, x):
         self.radius -= self.core_width
@@ -137,41 +138,36 @@ class CoreShellParticle:
 
         """
 
-        if self.energies_valid:
-            return self.s1_e, self.s1_h
-        else:
+        # Bounds in Joules.
+        # TODO: Find a better way to bracket energies.
+        lower_bound_e = 0
+        upper_bound_e = 5 * e
+        lower_bound_h = 0
+        upper_bound_h = 5 * e
 
-            # Bounds in Joules.
-            lower_bound_e = 0
-            upper_bound_e = 5 * self.ue
-            lower_bound_h = 0
-            upper_bound_h = 5 * self.uh
+        if bounds != ():
+            lower_bound_e, upper_bound_e = bounds[:2]
 
-            # These bounds are already in Joules. Do not mul by e again.
-            x: np.ndarray = np.linspace(lower_bound_e, upper_bound_e, resolution)
-            if bounds != ():
-                lower_bound_e, upper_bound_e = bounds[:2]
+        # Electron eigenvalue residual.
+        def eer(x):
+            return electron_eigenvalue_residual(x, self)
 
-            # Electron eigenvalue residual.
-            def eer(x):
-                return electron_eigenvalue_residual(x, self)
+        bracket = scan_and_bracket(eer, lower_bound_e, upper_bound_e, resolution)
+        self.s1_e = brentq(electron_eigenvalue_residual, *bracket, args=(self,))
 
-            bracket = scan_and_bracket(eer, lower_bound_e, upper_bound_e, resolution)
-            self.s1_e = brentq(electron_eigenvalue_residual, *bracket, args=(self,))
+        if bounds != ():
+            lower_bound_h, upper_bound_h = bounds[2:]
 
-            if bounds != ():
-                lower_bound_h, upper_bound_h = bounds[2:]
+        # Hole eigenvalue residual.
+        def her(x):
+            return hole_eigenvalue_residual(x, self)
 
-            # Hole eigenvalue residual.
-            def her(x):
-                return hole_eigenvalue_residual(x, self)
+        bracket = scan_and_bracket(her, lower_bound_h, upper_bound_h, resolution)
 
-            bracket = scan_and_bracket(her, lower_bound_h, upper_bound_h, resolution)
+        self.s1_h = brentq(hole_eigenvalue_residual, *bracket, args=(self,))
+        self.energies_valid = True
 
-            self.s1_h = brentq(hole_eigenvalue_residual, *bracket, args=(self,))
-            self.energies_valid = True
-
-            return self.s1_e, self.s1_h
+        return self.s1_e, self.s1_h
 
     def plot_electron_wavefunction(
         self, x, core_wavevector: float, shell_wavevector: float
@@ -223,27 +219,36 @@ class CoreShellParticle:
             -(
                 (k_h - k_e) * np.sin(R * (k_h + k_e))
                 - (k_h + k_e) * np.sin(R * (k_h - k_e))
-            ) * norm_e * norm_h
+            )
+            * norm_e
+            * norm_h
             / core_denom
         )
         shell_integral = (
             -(
                 (q_h - q_e) * np.sin(H * (q_h + q_e))
                 - (q_h + q_e) * np.sin(H * (q_h - q_e))
-            ) * norm_e * norm_h
+            )
+            * norm_e
+            * norm_h
             / shell_denom
         )
 
         return abs(core_integral + shell_integral) ** 2
 
     def numerical_overlap_integral(self):
+        """Calculates the numerical electron-hole overlap integral.
 
-        # The wavenumbers and distances of integration have been scaled to order of unity.
-        # Analytically, they are the same without scaling.
-        # Numerically, vastly difference numbers make life very sad. Do NOT remove the scaling here.
-        # Changing it to a difference, appropriate scaling, is possible, but do not _remove_ it.
-        # TODO: One possible scaling is to take the inverse of the max wavenumber, then scale everything with that.
-        # Might be interesting to try out.
+        Returns
+        -------
+
+        References
+        ----------
+        .. [1] Piryatinski, A., Ivanov, S. A., Tretiak, S., & Klimov, V. I. (2007). Effect of Quantum and Dielectric
+        Confinement on the Exciton−Exciton Interaction Energy in Type II Core/Shell Semiconductor Nanocrystals.
+        Nano Letters, 7(1), 108–115. https://doi.org/10.1021/nl0622404
+        """
+        # Scaling to 1 / nm.
         k_e, q_e, k_h, q_h = self.calculate_wavenumbers() * n_
         norm_e, norm_h = self._normalization()
 
@@ -263,10 +268,18 @@ class CoreShellParticle:
         def overlap_integrand_imag(x):
             return np.imag(x * x * ewf(x) * hwf(x))
 
-        overlap_integral_real = quad(overlap_integrand_real, 0, self.radius / n_) * norm_e * norm_h
-        overlap_integral_imag = quad(overlap_integrand_imag, 0, self.radius / n_) * norm_e * norm_h
+        overlap_integral_real = quad(overlap_integrand_real, 0, self.radius / n_)
+        overlap_integral_imag = quad(overlap_integrand_imag, 0, self.radius / n_)
+        # Return both the answer and order-of-magnitude of error.
         return (
-            abs(overlap_integral_real[0] + 1j * overlap_integral_imag[0]) ** 2 * n_ ** 2
+            abs(
+                (overlap_integral_real[0] + 1j * overlap_integral_imag[0])
+                * norm_e
+                * norm_h
+            )
+            ** 2
+            * n_ ** 2,
+            (overlap_integral_imag[1] + overlap_integral_real[1]) ** 2 * n_ ** 2,
         )
 
     def print_e_wf_at_zero(self):
@@ -401,7 +414,7 @@ class CoreShellParticle:
         )
         return result
 
-    def coulomb_screening_energy(self, relative_tolerance: float = 1e-4):
+    def coulomb_screening_energy(self, relative_tolerance: float = 1e-8):
         """
 
         Parameters
@@ -460,7 +473,7 @@ class CoreShellParticle:
             )
         )
 
-    def interface_polarization_energy(self, relative_tolerance: float = 1e-4):
+    def interface_polarization_energy(self, relative_tolerance: float = 1e-8):
         interface_polarization_operator = make_interface_polarization_operator(self)
 
         k_e, q_e, k_h, q_h = self.calculate_wavenumbers() * n_

@@ -152,9 +152,18 @@ wavefunction = np.vectorize(_wavefunction, otypes=(np.complex128,))
 
 @jit(nopython=True)
 def _densityfunction(
-    r: float, k: floatcomplex, q: floatcomplex, core_width: float, shell_width: float
+    r: float,
+    core_wavenumber: floatcomplex,
+    shell_wavenumber: floatcomplex,
+    core_width: float,
+    shell_width: float,
 ) -> float:
-    return abs(_wavefunction(r, k, q, core_width, shell_width)) ** 2
+    return (
+        abs(
+            _wavefunction(r, core_wavenumber, shell_wavenumber, core_width, shell_width)
+        )
+        ** 2
+    )
 
 
 # @jit(nopython = True) # Jitting this requires type info for csqrt. need to figure that out.
@@ -163,6 +172,7 @@ def wavenumber_from_energy(
 ) -> floatcomplex:
 
     # The energies supplied to this are already in Joules. Relax.
+    # TODO: Convert this to hbar in eV-s, then energies in eV.
     return csqrt(2 * mass * m_e * (energy - potential_offset)) / hbar
 
 
@@ -178,7 +188,7 @@ def electron_eigenvalue_residual(
     Parameters
     ----------
 
-    energy : float
+    energy : float, Joules
         The energy for which to calculate the wavevector of an electron in the nanoparticle.
 
     particle : CoreShellParticle
@@ -192,6 +202,9 @@ def electron_eigenvalue_residual(
         Confinement on the Exciton−Exciton Interaction Energy in Type II Core/Shell Semiconductor Nanocrystals.
         Nano Letters, 7(1), 108–115. https://doi.org/10.1021/nl0622404"""
     k_e, q_e = None, None
+
+    # if type(energy) is not float:
+    #     print('Electron residual energies of order:', energy[-1])
     if particle.e_h:
         k_e = wavenumber_from_energy(energy, particle.cmat.m_e)
         q_e = wavenumber_from_energy(

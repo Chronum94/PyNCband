@@ -10,3 +10,10 @@ This is still in development. You'll need PyCharm for any hope of using it.
 
 ## For developers:
 I've tried to make the code as self-explanatory and lucid as possible. Nevertheless, I will be adding a contribution readme soon.
+
+## Features:
+
+- [x] Energy calculation of S1 exciton state.
+- [x] Coulomb screening energy calculation.
+- [x] Polarization interaction energy calculation.
+- [ ] Internal units consistency.
