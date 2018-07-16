@@ -145,11 +145,15 @@ def _wavefunction(
     else:
         return 0
 
+
 # numba.vectorize might be faster, but requires significant refactoring.
 wavefunction = np.vectorize(_wavefunction, otypes=(np.complex128,))
 
+
 @jit(nopython=True)
-def _densityfunction(r: float, k: floatcomplex, q: floatcomplex, core_width: float, shell_width: float) -> float:
+def _densityfunction(
+    r: float, k: floatcomplex, q: floatcomplex, core_width: float, shell_width: float
+) -> float:
     return abs(_wavefunction(r, k, q, core_width, shell_width)) ** 2
 
 
@@ -295,7 +299,7 @@ def make_coulomb_screening_operator(coreshellparticle: "CoreShellParticle") -> C
         ) - (_heaviside(r_a - r_c, taz) + _heaviside(r_b - r_c, taz)) / (
             2 * rmax * shell_eps * eps0
         )
-        return val * e / n_ # Scaling to eV and meters.
+        return val * e / n_  # Scaling to eV and meters.
 
     return coulomb_screening_operator
 
@@ -314,10 +318,10 @@ def make_interface_polarization_operator(
         r_c = core_width
         r_p = particle_radius
         taz = 0.5  # Theta at zero, theta being step function.
-        val = - _heaviside(r_c - r_a, taz) * _heaviside(r_c - r_b, taz) * (
+        val = -_heaviside(r_c - r_a, taz) * _heaviside(r_c - r_b, taz) * (
             core_eps / shell_eps - 1
         ) / (r_c * core_eps) - (shell_eps - 1) / (2 * r_p * shell_eps)
-        return val * e / (n_ * eps0) # Scaling with physical quantities.
+        return val * e / (n_ * eps0)  # Scaling with physical quantities.
 
     return interface_polarization_operator
 
