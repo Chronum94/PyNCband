@@ -45,11 +45,14 @@ def _heaviside(x1: float, x2: float) -> float:
     ----------
     x1 : float
         The value at which to calculate the function.
+
     x2 : float
         The value of the function at 0. Typically, this is 0.5 although 0 or 1 are also used.
+
     Returns
     -------
     float : The value of the Heaviside function at the given point.
+
     """
     if x1 > 0:
         return 1.0
@@ -68,9 +71,11 @@ def _tanxdivx(x: floatcomplex) -> floatcomplex:
     ----------
     x : float, complex
         The point at which to evaluate the function.
+
     Returns
     -------
     float : The real function value at the point.
+
     """
     # Close to 0, tan(x)/x is just 1, to 15 places of decimal.
     if abs(x) < 1e-10:
@@ -92,8 +97,10 @@ def _unnormalized_core_wavefunction(
     ----------
     x : float
         The position at which to evaluate the wavefunction.
+
     k : float, purely real or purely imaginary
-        The wavenumber/momentum of the particle
+        The wavenumber/momentum of the particle.
+
     core_width : float
         The core width of the core-shell quantum dot.
 
@@ -101,6 +108,7 @@ def _unnormalized_core_wavefunction(
     -------
     val : float, complex
         The value of the wavefunction at the point x.
+
     """
     ksq = k ** 2  # Useful for the higher powers.
     xsq = x ** 2
@@ -130,15 +138,20 @@ def _unnormalized_shell_wavefunction(
     ----------
     x : float
         The position at which to evaluate the wavefunction.
+
     q : float, purely real or purely imaginary
-        The wavenumber/momentum of the particle
+        The wavenumber/momentum of the particle.
+
     core_width : float
         The core width of the core-shell quantum dot.
+
     shell_width : float
         The shell width of the core-shell quantum dot.
+
     Returns
     -------
     float, purely real or purely imaginary : The value of the wavefunction at the point x.
+
     """
     # This doesn't need the numerical stability shenanigans because we aren't evaluating it at x = 0.
     # But sin(q * shell_width) can still go to 0, technically. This may not happen because of how q is constrained.
@@ -153,7 +166,7 @@ unnormalized_shell_wavefunction = np.vectorize(
 
 @jit(nopython=True)
 def _wavefunction(
-    x: float, k: floatcomplex, q: floatcomplex, core_width: float, shell_width: float
+    x: float, core_wavenumber: floatcomplex, shell_wavenumber: floatcomplex, core_width: float, shell_width: float
 ) -> floatcomplex:
     """Evaluates the radially symmetric wavefunction values of the core-shell QD at given points.
 
@@ -163,14 +176,14 @@ def _wavefunction(
     Parameters
     ----------
 
-    x : Array of floats.
-        The radial points at which to evaluate the wavefunction. x can contain 0, since the core wavefunction has been
+    x : float
+        The radial point at which to evaluate the wavefunction. x can contain 0, since the core wavefunction has been
         numerically stabilized at 0.
 
-    k : complex
+    core_wavenumber : complex
         The (potentially) complex wavevector of the electron/hole in the core of the core-shell particle.
 
-    q : complex
+    shell_wavenumber : complex
         The (potentially) complex wavevector of the electron/hole in the shell of the core-shell particle.
 
     core_width : float
@@ -186,10 +199,10 @@ def _wavefunction(
         Nano Letters, 7(1), 108–115. https://doi.org/10.1021/nl0622404"""
 
     def cwf(xarg):
-        return _unnormalized_core_wavefunction(xarg, k, core_width)
+        return _unnormalized_core_wavefunction(xarg, core_wavenumber, core_width)
 
     def swf(xarg):
-        return _unnormalized_shell_wavefunction(xarg, q, core_width, shell_width)
+        return _unnormalized_shell_wavefunction(xarg, shell_wavenumber, core_width, shell_width)
 
     particle_width = core_width + shell_width
 
@@ -213,7 +226,27 @@ def _densityfunction(
     core_width: float,
     shell_width: float,
 ) -> float:
-    """Returns the probability density from a wavefunction at a point in the core-shell."""
+    """Returns the probability density from a wavefunction at a point in the core-shell.
+
+    Parameters
+    ----------
+    r : float
+        The point at which to evaluate the probability density.
+
+    core_wavenumber : float, purely real or purely imaginary, 1 / nanometers
+        The wavenumber in the core of the core-shell quantum dot.
+
+    shell_wavenumber : float, purely real or purely imaginary, 1 / nanometers
+        The wavenumber in the shell of the core-shell quantum dot.
+
+    core_width : float, nanometers
+        The width of the core of the quantum dot.
+    shell_width : float, nanometers
+        The width of the shell of the quantum dot.
+    Returns
+    -------
+
+    """
     return (
         abs(
             _wavefunction(r, core_wavenumber, shell_wavenumber, core_width, shell_width)
