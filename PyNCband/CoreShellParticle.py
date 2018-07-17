@@ -99,12 +99,8 @@ class CoreShellParticle:
         self.energies_valid = False
         self.norm_valid = False
 
-    def calculate_wavenumbers(self, is_nm=True) -> np.ndarray:
+    def calculate_wavenumbers(self) -> np.ndarray:
         """Returns a tuple of the electron wavevectors in the core and the shell.
-
-        Parameters
-        ----------
-        is_nm
 
         Returns
         -------
@@ -115,33 +111,35 @@ class CoreShellParticle:
         energy_e, energy_h = self.calculate_s1_energies()
         # print('E:', energy_e, energy_h)
         # This gets set to false when we change core/shell radius, etc.
-
-        if self.e_h:
-            return np.array(
-                [
-                    wavenumber_from_energy(energy_e, self.cmat.m_e),
-                    wavenumber_from_energy(
-                        energy_e, self.smat.m_e, potential_offset=self.ue
-                    ),
-                    wavenumber_from_energy(
-                        energy_h, self.cmat.m_h, potential_offset=self.uh
-                    ),
-                    wavenumber_from_energy(energy_h, self.smat.m_h),
-                ]
-            )
-        elif self.h_e:
-            return np.array(
-                [
-                    wavenumber_from_energy(
-                        energy_e, self.cmat.m_e, potential_offset=self.ue
-                    ),
-                    wavenumber_from_energy(energy_e, self.smat.m_e),
-                    wavenumber_from_energy(energy_h, self.cmat.m_h),
-                    wavenumber_from_energy(
-                        energy_h, self.smat.m_h, potential_offset=self.uh
-                    ),
-                ]
-            )
+        if self.type_one:
+            raise NotImplementedError
+        elif self.type_two:
+            if self.e_h:
+                return np.array(
+                    [
+                        wavenumber_from_energy(energy_e, self.cmat.m_e),
+                        wavenumber_from_energy(
+                            energy_e, self.smat.m_e, potential_offset=self.ue
+                        ),
+                        wavenumber_from_energy(
+                            energy_h, self.cmat.m_h, potential_offset=self.uh
+                        ),
+                        wavenumber_from_energy(energy_h, self.smat.m_h),
+                    ]
+                )
+            elif self.h_e:
+                return np.array(
+                    [
+                        wavenumber_from_energy(
+                            energy_e, self.cmat.m_e, potential_offset=self.ue
+                        ),
+                        wavenumber_from_energy(energy_e, self.smat.m_e),
+                        wavenumber_from_energy(energy_h, self.cmat.m_h),
+                        wavenumber_from_energy(
+                            energy_h, self.smat.m_h, potential_offset=self.uh
+                        ),
+                    ]
+                )
 
     # This method can currently only find cases where the energy of the lowest state is above the potential step.
     def calculate_s1_energies(self, bounds=(), resolution=10000) -> Tuple[float, float]:
@@ -155,7 +153,7 @@ class CoreShellParticle:
 
         Returns
         -------
-
+        2-tuple : float, Joules
         """
 
         # Bounds in Joules.
@@ -166,7 +164,7 @@ class CoreShellParticle:
         upper_bound_h = 5 * e
 
         if bounds != ():
-            lower_bound_e, upper_bound_e = bounds[:2]
+            upper_bound_e = bounds[0] * e
 
         # Electron eigenvalue residual.
         def eer(x):
@@ -176,7 +174,7 @@ class CoreShellParticle:
         self.s1_e = brentq(electron_eigenvalue_residual, *bracket, args=(self,))
 
         if bounds != ():
-            lower_bound_h, upper_bound_h = bounds[2:]
+            upper_bound_h = bounds[1] * e
 
         # Hole eigenvalue residual.
         def her(x):
@@ -190,11 +188,11 @@ class CoreShellParticle:
         return self.s1_e, self.s1_h
 
     def plot_electron_wavefunction(
-        self, x, core_wavevector: float, shell_wavevector: float
+        self, x, core_wavenumber: float, shell_wavenumber: float
     ):
 
         y = wavefunction(
-            x, core_wavevector, shell_wavevector, self.core_width, self.shell_width
+            x, core_wavenumber, shell_wavenumber, self.core_width, self.shell_width
         )
         return y
 
@@ -300,6 +298,7 @@ class CoreShellParticle:
     def print_e_wf_at_zero(self):
         """Prints the wavefunction at 0."""
         print(_wavefunction(0, self.calculate_wavenumbers()[0], self.core_width))
+
 
     # TODO: Implement branch for eh/he coreshells.
     def localization_electron_core(self, shell_width: float = None):
@@ -509,7 +508,7 @@ class CoreShellParticle:
                 self.radius,
                 0,
                 self.radius,
-                epsrel=relative_tolerance,
+                epsrel=relative_tolerance
             )
         ) * norm_e * norm_h
 

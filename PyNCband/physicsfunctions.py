@@ -7,7 +7,7 @@ from numba import jit, vectorize, float64, complex128
 from scipy.constants import hbar, e, m_e, epsilon_0 as eps0
 
 from .scaling import n_
-
+from .utils import *
 from typing import Callable, Union, TYPE_CHECKING, Tuple
 
 if TYPE_CHECKING:
@@ -391,5 +391,8 @@ def scan_and_bracket(
 
     # The 0.5 thresholding is mostly arbitrary. A 0 would work just fine
     y_neg2pos_change = np.argwhere(np.where(y_sign_change > 0.5, 1, 0))
-    root_position = y_neg2pos_change[0]
-    return x[root_position], x[root_position + 1]
+    if y_neg2pos_change.shape[0] > 0:
+        root_position = y_neg2pos_change[0]
+        return x[root_position], x[root_position + 1]
+    else:
+        raise EnergyNotBracketedError("Try increasing the upper energy bound to bracket the energy of the first state.")

@@ -26,12 +26,12 @@ xx, yy = np.meshgrid(x, x)
 zz = np.zeros_like(xx)
 
 
-CdS_AlSb.set_core_width(4)
+CdS_AlSb.set_core_width(0.7)
 # CdS_AlSb.set_shell_width(4)
 with w.catch_warnings() as wfil:
     w.simplefilter("error", RuntimeWarning)
     print("CBE step in eV:", CdS_AlSb.ue / e)
-    for shellw in np.linspace(5.01, 5.05, 2):
+    for shellw in np.linspace(0.501, 0.505, 4):
         # print("Width:", shellw)
         print("Coreloc:", CdS_AlSb.localization_electron_core(shellw))
         print("Shellloc:", CdS_AlSb.localization_hole_shell(shellw))
@@ -50,7 +50,5 @@ with w.catch_warnings() as wfil:
         # print("ExcEnergy:", CdS_AlSb.bandgap + np.sum(energies) + coulomb_energy[0] + polarization_energy[0])
         # print(AlSb_CdS.localization_electron_core())
         print("\n")
-# plt.imshow(zz)
-# plt.colorbar()
-# # plt.clim(0, 20)
-# plt.show()
+
+CdS_AlSb.plot_potential_profile()
