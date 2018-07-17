@@ -37,7 +37,7 @@ floatcomplex = Union[float, complex]
 floatarray = Union[float, np.ndarray]
 
 
-@jit(["float64(float64, float64)"], nopython=True)
+@jit([float64(float64, float64)], nopython=True)
 def _heaviside(x1: float, x2: float) -> float:
     """A custom Heaviside function for number support.
 
@@ -63,7 +63,7 @@ def _heaviside(x1: float, x2: float) -> float:
 
 
 # @vectorize(nopython=True)
-@jit(["float64(float64)", "float64(complex128)"], nopython=True)
+@jit([float64(float64), float64(complex128)], nopython=True)
 def _tanxdivx(x: floatcomplex) -> floatcomplex:
     """A custom tan(x)/x function for complex purely real or purely imaginary x, stabilized around |x| = 0,
 
@@ -307,11 +307,11 @@ def electron_eigenvalue_residual(
         https://doi.org/10.1002/smll.200800841
 
     """
-    k_e, q_e = None, None
+    core_electron_wavenumber, shell_electron_wavenumber = None, None
 
     if particle.type_one:
-        k_e = wavenumber_from_energy(energy, particle.cmat.m_e, potential_offset=particle.ue) * n_
-        q_e = (
+        core_electron_wavenumber = wavenumber_from_energy(energy, particle.cmat.m_e, potential_offset=particle.ue) * n_
+        shell_electron_wavenumber = (
                 wavenumber_from_energy(
                     energy, particle.smat.m_e
                 )
@@ -319,23 +319,23 @@ def electron_eigenvalue_residual(
         )
     elif particle.type_two:
         if particle.e_h:
-            k_e = wavenumber_from_energy(energy, particle.cmat.m_e) * n_
-            q_e = (
+            core_electron_wavenumber = wavenumber_from_energy(energy, particle.cmat.m_e) * n_
+            shell_electron_wavenumber = (
                 wavenumber_from_energy(
                     energy, particle.smat.m_e, potential_offset=particle.ue
                 )
                 * n_
             )
         elif particle.h_e:
-            k_e = (
+            core_electron_wavenumber = (
                 wavenumber_from_energy(
                     energy, particle.cmat.m_e, potential_offset=particle.ue
                 )
                 * n_
             )
-            q_e = wavenumber_from_energy(energy, particle.smat.m_e) * n_
-    core_x = k_e * particle.core_width
-    shell_x = q_e * particle.shell_width
+            shell_electron_wavenumber = wavenumber_from_energy(energy, particle.smat.m_e) * n_
+    core_x = core_electron_wavenumber * particle.core_width
+    shell_x = shell_electron_wavenumber * particle.shell_width
     core_width = particle.core_width
     shell_width = particle.shell_width
     mass_ratio = particle.smat.m_e / particle.cmat.m_e
@@ -391,10 +391,10 @@ def hole_eigenvalue_residual(
         https://doi.org/10.1002/smll.200800841
 
     """
-    k_h, q_h = None, None
+    core_hole_wavenumber, shell_electron_wavenumber = None, None
     if particle.type_one:
-        k_h = wavenumber_from_energy(energy, particle.cmat.m_h, potential_offset=particle.uh) * n_
-        q_h = (
+        core_hole_wavenumber = wavenumber_from_energy(energy, particle.cmat.m_h, potential_offset=particle.uh) * n_
+        shell_electron_wavenumber = (
                 wavenumber_from_energy(
                     energy, particle.smat.m_h
                 )
@@ -402,23 +402,23 @@ def hole_eigenvalue_residual(
         )
     elif particle.type_two:
         if particle.e_h:
-            k_h = wavenumber_from_energy(energy, particle.cmat.m_h) * n_
-            q_h = (
+            core_hole_wavenumber = wavenumber_from_energy(energy, particle.cmat.m_h) * n_
+            shell_electron_wavenumber = (
                 wavenumber_from_energy(
                     energy, particle.smat.m_h, potential_offset=particle.uh
                 )
                 * n_
             )
         elif particle.h_e:
-            k_h = (
+            core_hole_wavenumber = (
                 wavenumber_from_energy(
                     energy, particle.cmat.m_h, potential_offset=particle.uh
                 )
                 * n_
             )
-            q_h = wavenumber_from_energy(energy, particle.smat.m_h) * n_
-    core_x = k_h * particle.core_width
-    shell_x = q_h * particle.shell_width
+            shell_electron_wavenumber = wavenumber_from_energy(energy, particle.smat.m_h) * n_
+    core_x = core_hole_wavenumber * particle.core_width
+    shell_x = shell_electron_wavenumber * particle.shell_width
     core_width = particle.core_width
     shell_width = particle.shell_width
     mass_ratio = particle.smat.m_h / particle.cmat.m_h
@@ -468,8 +468,17 @@ def _x_residual_function(x: float, mass_in_core: float, mass_in_shell: float) ->
 
 
 def make_coulomb_screening_operator(coreshellparticle: "CoreShellParticle") -> Callable:
+    """
 
-    # Scaling lengths to nm.
+    Parameters
+    ----------
+    coreshellparticle
+
+    Returns
+    -------
+
+    """
+
     core_width = coreshellparticle.core_width
     core_eps, shell_eps = coreshellparticle.cmat.eps, coreshellparticle.smat.eps
 
