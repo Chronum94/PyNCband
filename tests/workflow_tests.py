@@ -22,12 +22,12 @@ x = np.linspace(1, 2, 10)
 xx, yy = np.meshgrid(x, x)
 zz = np.zeros_like(xx)
 
-CdS_AlSb.set_core_width(0.7)
+CdS_AlSb.set_core_width(2)
 # CdS_AlSb.set_shell_width(4)
 with w.catch_warnings() as wfil:
     w.simplefilter("error", RuntimeWarning)
     print("CBE step in eV:", CdS_AlSb.ue / e)
-    for shellw in np.linspace(0.501, 0.505, 4):
+    for shellw in np.linspace(3, 4.0, 2):
         # print("Width:", shellw)
         print("Coreloc:", CdS_AlSb.localization_electron_core(shellw))
         print("Shellloc:", CdS_AlSb.localization_hole_shell(shellw))

@@ -17,5 +17,5 @@ I've tried to make the code as self-explanatory and lucid as possible. Neverthel
 - [x] Coulomb screening energy calculation.
 - [x] Polarization interaction energy calculation.
 - [x] Internal units consistency.
-- [ ] Wavenumbers for Type 1 NQDs.
+- [x] Wavenumbers for Type 1 NQDs.
 - [ ] Verification against experimental data.

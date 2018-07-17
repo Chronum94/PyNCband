@@ -100,16 +100,18 @@ class CoreShellParticle:
 
         Returns
         -------
-        Tuples(float, float, float, float) : Wavenumbers in 1 / m.
+        wavenumbers : [float, float, float, float] : Wavenumbers in 1 / m.
+            Array of wavenumbers
 
         References
         ----------
-        .. [1] Piryatinski, A., Ivanov, S. A., Tretiak, S., & Klimov, V. I. (2007). Effect of Quantum and Dielectric
-        Confinement on the Exciton−Exciton Interaction Energy in Type II Core/Shell Semiconductor Nanocrystals.
+        .. [1] Piryatinski, A., Ivanov, S. A., Tretiak, S., & Klimov, V. I. (2007). Effect of Quantum and Dielectric \
+        Confinement on the Exciton−Exciton Interaction Energy in Type II Core/Shell Semiconductor Nanocrystals. \
         Nano Letters, 7(1), 108–115. https://doi.org/10.1021/nl0622404
 
-        .. [2] Li, L., Reiss, P., & Protie, M. (2009). Core / Shell Semiconductor Nanocrystals, (2), 154–168.
+        .. [2] Li, L., Reiss, P., & Protie, M. (2009). Core / Shell Semiconductor Nanocrystals, (2), 154–168. \
         https://doi.org/10.1002/smll.200800841
+
         """
         # energy_e, energy_h = None, None
 
@@ -169,7 +171,8 @@ class CoreShellParticle:
 
         Returns
         -------
-        2-tuple : float, Joules
+        s1_energies : 2-tuple of float, Joules
+            The s1 exciton energies of electrons and holes.
         """
 
         # Bounds in Joules.
@@ -233,7 +236,8 @@ class CoreShellParticle:
 
         Returns
         -------
-        float : The eelctron-hole overlap integral.
+        overlap : float
+            The electron-hole overlap integral.
         """
         k_e, q_e, k_h, q_h = self.calculate_wavenumbers() * n_
         K_e, Q_e, K_h, Q_h = (
@@ -275,12 +279,15 @@ class CoreShellParticle:
 
         Returns
         -------
-        float : The electron-hole overlap integral and the error in the integral.
+        overlap : [float, float]
+            The electron-hole overlap integral and a rough estimate of the error in the integral.
+
         References
         ----------
-        .. [1] Piryatinski, A., Ivanov, S. A., Tretiak, S., & Klimov, V. I. (2007). Effect of Quantum and Dielectric
-        Confinement on the Exciton−Exciton Interaction Energy in Type II Core/Shell Semiconductor Nanocrystals.
+        .. [1] Piryatinski, A., Ivanov, S. A., Tretiak, S., & Klimov, V. I. (2007). Effect of Quantum and Dielectric \
+        Confinement on the Exciton−Exciton Interaction Energy in Type II Core/Shell Semiconductor Nanocrystals. \
         Nano Letters, 7(1), 108–115. https://doi.org/10.1021/nl0622404
+
         """
         # Scaling to 1 / nm.
         k_e, q_e, k_h, q_h = self.calculate_wavenumbers() * n_
@@ -327,7 +334,8 @@ class CoreShellParticle:
 
         Returns
         -------
-        float : The minimum core localization radius, in nanometers.
+        localization_width : float, nanometers
+            The minimum core localization radius.
         """
         if self.type_one:
             raise NotImplementedError
@@ -386,7 +394,7 @@ class CoreShellParticle:
 
                     # TODO: This lower bound does not agree with the paper. Need to figure this garbage out.
                     lower_bound, upper_bound = scan_and_bracket(
-                        min_core_loc_from_shell, 1e-12, upper_bound, 10000
+                        min_core_loc_from_shell, 0, upper_bound, 10000
                     )
                     # print('FALLBACKLOW:', lower_bound)
                     # print('FALLBACKHIGH:', upper_bound)

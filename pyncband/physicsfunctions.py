@@ -166,7 +166,11 @@ unnormalized_shell_wavefunction = np.vectorize(
 
 @jit(nopython=True)
 def _wavefunction(
-    x: float, core_wavenumber: floatcomplex, shell_wavenumber: floatcomplex, core_width: float, shell_width: float
+    x: float,
+    core_wavenumber: floatcomplex,
+    shell_wavenumber: floatcomplex,
+    core_width: float,
+    shell_width: float,
 ) -> floatcomplex:
     """Evaluates the radially symmetric wavefunction values of the core-shell QD at given points.
 
@@ -202,7 +206,9 @@ def _wavefunction(
         return _unnormalized_core_wavefunction(xarg, core_wavenumber, core_width)
 
     def swf(xarg):
-        return _unnormalized_shell_wavefunction(xarg, shell_wavenumber, core_width, shell_width)
+        return _unnormalized_shell_wavefunction(
+            xarg, shell_wavenumber, core_width, shell_width
+        )
 
     particle_width = core_width + shell_width
 
@@ -310,16 +316,20 @@ def electron_eigenvalue_residual(
     core_electron_wavenumber, shell_electron_wavenumber = None, None
 
     if particle.type_one:
-        core_electron_wavenumber = wavenumber_from_energy(energy, particle.cmat.m_e, potential_offset=particle.ue) * n_
+        core_electron_wavenumber = (
+            wavenumber_from_energy(
+                energy, particle.cmat.m_e, potential_offset=particle.ue
+            )
+            * n_
+        )
         shell_electron_wavenumber = (
-                wavenumber_from_energy(
-                    energy, particle.smat.m_e
-                )
-                * n_
+            wavenumber_from_energy(energy, particle.smat.m_e) * n_
         )
     elif particle.type_two:
         if particle.e_h:
-            core_electron_wavenumber = wavenumber_from_energy(energy, particle.cmat.m_e) * n_
+            core_electron_wavenumber = (
+                wavenumber_from_energy(energy, particle.cmat.m_e) * n_
+            )
             shell_electron_wavenumber = (
                 wavenumber_from_energy(
                     energy, particle.smat.m_e, potential_offset=particle.ue
@@ -333,7 +343,9 @@ def electron_eigenvalue_residual(
                 )
                 * n_
             )
-            shell_electron_wavenumber = wavenumber_from_energy(energy, particle.smat.m_e) * n_
+            shell_electron_wavenumber = (
+                wavenumber_from_energy(energy, particle.smat.m_e) * n_
+            )
     core_x = core_electron_wavenumber * particle.core_width
     shell_x = shell_electron_wavenumber * particle.shell_width
     core_width = particle.core_width
@@ -393,16 +405,20 @@ def hole_eigenvalue_residual(
     """
     core_hole_wavenumber, shell_electron_wavenumber = None, None
     if particle.type_one:
-        core_hole_wavenumber = wavenumber_from_energy(energy, particle.cmat.m_h, potential_offset=particle.uh) * n_
+        core_hole_wavenumber = (
+            wavenumber_from_energy(
+                energy, particle.cmat.m_h, potential_offset=particle.uh
+            )
+            * n_
+        )
         shell_electron_wavenumber = (
-                wavenumber_from_energy(
-                    energy, particle.smat.m_h
-                )
-                * n_
+            wavenumber_from_energy(energy, particle.smat.m_h) * n_
         )
     elif particle.type_two:
         if particle.e_h:
-            core_hole_wavenumber = wavenumber_from_energy(energy, particle.cmat.m_h) * n_
+            core_hole_wavenumber = (
+                wavenumber_from_energy(energy, particle.cmat.m_h) * n_
+            )
             shell_electron_wavenumber = (
                 wavenumber_from_energy(
                     energy, particle.smat.m_h, potential_offset=particle.uh
@@ -416,7 +432,9 @@ def hole_eigenvalue_residual(
                 )
                 * n_
             )
-            shell_electron_wavenumber = wavenumber_from_energy(energy, particle.smat.m_h) * n_
+            shell_electron_wavenumber = (
+                wavenumber_from_energy(energy, particle.smat.m_h) * n_
+            )
     core_x = core_hole_wavenumber * particle.core_width
     shell_x = shell_electron_wavenumber * particle.shell_width
     core_width = particle.core_width
