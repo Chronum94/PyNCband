@@ -4,9 +4,9 @@ import matplotlib.pyplot as plt
 
 from scipy.constants import hbar, m_e, e
 
-from PyNCband.Material import Material
-from PyNCband.CoreShellParticle import CoreShellParticle
-from PyNCband.scaling import n_
+from pyncband.Material import Material
+from pyncband.CoreShellParticle import CoreShellParticle
+from pyncband.scaling import n_
 
 # These tests have known answers.
 

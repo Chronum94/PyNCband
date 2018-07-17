@@ -59,7 +59,7 @@ def _heaviside(x1: float, x2: float) -> float:
 
 
 # @vectorize(nopython=True)
-@jit(["float64(float64)", "complex128(complex128)"], nopython=True)
+@jit(["float64(float64)", "float64(complex128)"], nopython=True)
 def _tanxdivx(x: floatcomplex) -> floatcomplex:
     """A custom tan(x)/x function for complex purely real or purely imaginary x, stabilized around |x| = 0,
 
@@ -71,10 +71,9 @@ def _tanxdivx(x: floatcomplex) -> floatcomplex:
     -------
 
     """
-    xsq = abs(x) ** 2
-    # A simple 2nd order Taylor expansion will be accurate enough this close to 0.
-    if abs(x) < 1e-13:
-        return 1 - xsq / 2
+    # Close to 0, tan(x)/x is just 1, to 15 places of decimal.
+    if abs(x) < 1e-10:
+        return 1.0
     else:
         return (tan(x) / x).real
 

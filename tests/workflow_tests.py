@@ -4,8 +4,8 @@ import numpy as np
 import numpy.testing as test
 from scipy.constants import e
 
-from PyNCband.CoreShellParticle import CoreShellParticle
-from PyNCband.Material import Material
+from pyncband.CoreShellParticle import CoreShellParticle
+from pyncband.Material import Material
 
 AlSb = Material(1.6, -2.9, 0.12, 0.98, 11.0, "AlSb")
 CdS = Material(2.4, -3.5, 0.21, 0.8, 9.4, "CdS")

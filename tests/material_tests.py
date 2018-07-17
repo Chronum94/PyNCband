@@ -1,7 +1,7 @@
 import numpy.testing as test
 
-from PyNCband.Material import Material
-from PyNCband.CoreShellParticle import CoreShellParticle
+from pyncband.Material import Material
+from pyncband.CoreShellParticle import CoreShellParticle
 
 if __name__ == "__main__":
     AlSb = Material(1.6, -2.9, 0.12, 0.98, 2, "AlSb")
