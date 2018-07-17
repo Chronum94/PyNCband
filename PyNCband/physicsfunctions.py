@@ -476,4 +476,6 @@ def scan_and_bracket(
         root_position = y_neg2pos_change[0]
         return x[root_position], x[root_position + 1]
     else:
-        raise EnergyNotBracketedError("Try increasing the upper energy bound to bracket the energy of the first state.")
+        raise EnergyNotBracketedError(
+            "Try increasing the upper energy bound to bracket the energy of the first state."
+        )

@@ -101,6 +101,15 @@ class CoreShellParticle:
         Returns
         -------
         Tuples(float, float, float, float) : Wavenumbers in 1 / m.
+
+        References
+        ----------
+        .. [1] Piryatinski, A., Ivanov, S. A., Tretiak, S., & Klimov, V. I. (2007). Effect of Quantum and Dielectric
+        Confinement on the Exciton−Exciton Interaction Energy in Type II Core/Shell Semiconductor Nanocrystals.
+        Nano Letters, 7(1), 108–115. https://doi.org/10.1021/nl0622404
+
+        .. [2] Li, L., Reiss, P., & Protie, M. (2009). Core / Shell Semiconductor Nanocrystals, (2), 154–168.
+        https://doi.org/10.1002/smll.200800841
         """
         # energy_e, energy_h = None, None
 
@@ -108,7 +117,18 @@ class CoreShellParticle:
         # print('E:', energy_e, energy_h)
         # This gets set to false when we change core/shell radius, etc.
         if self.type_one:
-            raise NotImplementedError
+            return np.array(
+                [
+                    wavenumber_from_energy(
+                        energy_e, self.cmat.m_e, potential_offset=self.ue
+                    ),
+                    wavenumber_from_energy(energy_e, self.smat.m_e),
+                    wavenumber_from_energy(
+                        energy_h, self.cmat.m_h, potential_offset=self.uh
+                    ),
+                    wavenumber_from_energy(energy_h, self.smat.m_h),
+                ]
+            )
         elif self.type_two:
             if self.e_h:
                 return np.array(
@@ -295,7 +315,6 @@ class CoreShellParticle:
         """Prints the wavefunction at 0."""
         print(_wavefunction(0, self.calculate_wavenumbers()[0], self.core_width))
 
-
     # TODO: Implement branch for eh/he coreshells.
     def localization_electron_core(self, shell_width: float = None):
         """Minimum core width for localization of electron for a given shell width.
@@ -330,7 +349,10 @@ class CoreShellParticle:
             # In the Piryatinski 2007 paper, this is used to set a lower bound on the core radius search bracket.
             # However, I've noticed that this lower bracket often fails. Need to look more into why.
             x1 = brentq(
-                _x_residual_function, -np.pi + 1e-10, 0, args=(self.cmat.m_e, self.smat.m_e)
+                _x_residual_function,
+                -np.pi + 1e-10,
+                0,
+                args=(self.cmat.m_e, self.smat.m_e),
             )
 
             # Same for this.
@@ -463,16 +485,20 @@ class CoreShellParticle:
         )
 
         # Energy returned in units of eV.
-        return np.array(
-            dblquad(
-                coulomb_integrand,
-                0,
-                self.radius,
-                0,
-                self.radius,
-                epsrel=relative_tolerance,
+        return (
+            np.array(
+                dblquad(
+                    coulomb_integrand,
+                    0,
+                    self.radius,
+                    0,
+                    self.radius,
+                    epsrel=relative_tolerance,
+                )
             )
-        ) * norm_e * norm_h
+            * norm_e
+            * norm_h
+        )
 
     def interface_polarization_energy(self, relative_tolerance: float = 1e-4):
         """
@@ -509,17 +535,22 @@ class CoreShellParticle:
                 * hdf(r2)
                 * interface_polarization_operator(r1, r2)
             )
-        print('L504, wnums', k_e, q_e, k_h, q_h)
-        return np.array(
-            dblquad(
-                polarization_integrand,
-                0,
-                self.radius,
-                0,
-                self.radius,
-                epsrel=relative_tolerance
+
+        print("L504, wnums", k_e, q_e, k_h, q_h)
+        return (
+            np.array(
+                dblquad(
+                    polarization_integrand,
+                    0,
+                    self.radius,
+                    0,
+                    self.radius,
+                    epsrel=relative_tolerance,
+                )
             )
-        ) * norm_e * norm_h
+            * norm_e
+            * norm_h
+        )
 
     # This is likely to get refactored later to return types.
     def _is_type_one(self):

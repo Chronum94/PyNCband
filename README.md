@@ -16,4 +16,6 @@ I've tried to make the code as self-explanatory and lucid as possible. Neverthel
 - [x] Energy calculation of S1 exciton state.
 - [x] Coulomb screening energy calculation.
 - [x] Polarization interaction energy calculation.
-- [ ] Internal units consistency.
+- [x] Internal units consistency.
+- [ ] Wavenumbers for Type 1 NQDs.
+- [ ] Verification against experimental data.
