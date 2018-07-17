@@ -301,27 +301,39 @@ def electron_eigenvalue_residual(
 
     .. [1] Piryatinski, A., Ivanov, S. A., Tretiak, S., & Klimov, V. I. (2007). Effect of Quantum and Dielectric
         Confinement on the Exciton−Exciton Interaction Energy in Type II Core/Shell Semiconductor Nanocrystals.
-        Nano Letters, 7(1), 108–115. https://doi.org/10.1021/nl0622404"""
+        Nano Letters, 7(1), 108–115. https://doi.org/10.1021/nl0622404
+
+    .. [2] Li, L., Reiss, P., & Protie, M. (2009). Core / Shell Semiconductor Nanocrystals, (2), 154–168.
+        https://doi.org/10.1002/smll.200800841
+
+    """
     k_e, q_e = None, None
 
-    # if type(energy) is not float:
-    #     print('Electron residual energies of order:', energy[-1])
-    if particle.e_h:
-        k_e = wavenumber_from_energy(energy, particle.cmat.m_e) * n_
+    if particle.type_one:
+        k_e = wavenumber_from_energy(energy, particle.cmat.m_e, potential_offset=particle.ue) * n_
         q_e = (
-            wavenumber_from_energy(
-                energy, particle.smat.m_e, potential_offset=particle.ue
-            )
-            * n_
+                wavenumber_from_energy(
+                    energy, particle.smat.m_e
+                )
+                * n_
         )
-    elif particle.h_e:
-        k_e = (
-            wavenumber_from_energy(
-                energy, particle.cmat.m_e, potential_offset=particle.ue
+    elif particle.type_two:
+        if particle.e_h:
+            k_e = wavenumber_from_energy(energy, particle.cmat.m_e) * n_
+            q_e = (
+                wavenumber_from_energy(
+                    energy, particle.smat.m_e, potential_offset=particle.ue
+                )
+                * n_
             )
-            * n_
-        )
-        q_e = wavenumber_from_energy(energy, particle.smat.m_e) * n_
+        elif particle.h_e:
+            k_e = (
+                wavenumber_from_energy(
+                    energy, particle.cmat.m_e, potential_offset=particle.ue
+                )
+                * n_
+            )
+            q_e = wavenumber_from_energy(energy, particle.smat.m_e) * n_
     core_x = k_e * particle.core_width
     shell_x = q_e * particle.shell_width
     core_width = particle.core_width
@@ -342,7 +354,6 @@ def electron_eigenvalue_residual(
             - 1 / _tanxdivx(shell_x) * core_width / shell_width
         )
     else:
-        a = 1
         return np.real(
             (1 - 1 / tanxdivx(core_x)) * mass_ratio
             - 1
@@ -362,7 +373,7 @@ def hole_eigenvalue_residual(
     Parameters
     ----------
 
-    energy : float
+    energy : float, Joules
         The energy for which to calculate the wavevector of a hole in in the nanoparticle.
 
     particle : CoreShellParticle
@@ -374,24 +385,38 @@ def hole_eigenvalue_residual(
 
     .. [1] Piryatinski, A., Ivanov, S. A., Tretiak, S., & Klimov, V. I. (2007). Effect of Quantum and Dielectric
         Confinement on the Exciton−Exciton Interaction Energy in Type II Core/Shell Semiconductor Nanocrystals.
-        Nano Letters, 7(1), 108–115. https://doi.org/10.1021/nl0622404"""
+        Nano Letters, 7(1), 108–115. https://doi.org/10.1021/nl0622404
+
+    .. [2] Li, L., Reiss, P., & Protie, M. (2009). Core / Shell Semiconductor Nanocrystals, (2), 154–168.
+        https://doi.org/10.1002/smll.200800841
+
+    """
     k_h, q_h = None, None
-    if particle.e_h:
-        k_h = wavenumber_from_energy(energy, particle.cmat.m_e) * n_
+    if particle.type_one:
+        k_h = wavenumber_from_energy(energy, particle.cmat.m_h, potential_offset=particle.uh) * n_
         q_h = (
-            wavenumber_from_energy(
-                energy, particle.smat.m_e, potential_offset=particle.ue
-            )
-            * n_
+                wavenumber_from_energy(
+                    energy, particle.smat.m_h
+                )
+                * n_
         )
-    elif particle.h_e:
-        k_h = (
-            wavenumber_from_energy(
-                energy, particle.cmat.m_e, potential_offset=particle.ue
+    elif particle.type_two:
+        if particle.e_h:
+            k_h = wavenumber_from_energy(energy, particle.cmat.m_h) * n_
+            q_h = (
+                wavenumber_from_energy(
+                    energy, particle.smat.m_h, potential_offset=particle.uh
+                )
+                * n_
             )
-            * n_
-        )
-        q_h = wavenumber_from_energy(energy, particle.smat.m_e) * n_
+        elif particle.h_e:
+            k_h = (
+                wavenumber_from_energy(
+                    energy, particle.cmat.m_h, potential_offset=particle.uh
+                )
+                * n_
+            )
+            q_h = wavenumber_from_energy(energy, particle.smat.m_h) * n_
     core_x = k_h * particle.core_width
     shell_x = q_h * particle.shell_width
     core_width = particle.core_width
@@ -405,7 +430,6 @@ def hole_eigenvalue_residual(
             - 1 / _tanxdivx(shell_x) * core_width / shell_width
         )
     else:
-        a = 1
         return np.real(
             (1 - 1 / tanxdivx(core_x)) * mass_ratio
             - 1
@@ -425,6 +449,14 @@ def _x_residual_function(x: float, mass_in_core: float, mass_in_shell: float) ->
 
     Returns
     -------
+
+
+    References
+    ----------
+
+    .. [1] Piryatinski, A., Ivanov, S. A., Tretiak, S., & Klimov, V. I. (2007). Effect of Quantum and Dielectric
+    Confinement on the Exciton−Exciton Interaction Energy in Type II Core/Shell Semiconductor Nanocrystals.
+    Nano Letters, 7(1), 108–115. https://doi.org/10.1021/nl0622404
 
     """
     m = mass_in_shell / mass_in_core
