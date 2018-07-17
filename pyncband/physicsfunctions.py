@@ -43,19 +43,20 @@ def _heaviside(x1: float, x2: float) -> float:
 
     Parameters
     ----------
-    x1
-    x2
-
+    x1 : float
+        The value at which to calculate the function.
+    x2 : float
+        The value of the function at 0. Typically, this is 0.5 although 0 or 1 are also used.
     Returns
     -------
-
+    float : The value of the Heaviside function at the given point.
     """
     if x1 > 0:
-        return 1
+        return 1.0
     elif x1 == 0:
         return x2
     else:
-        return 0
+        return 0.0
 
 
 # @vectorize(nopython=True)
@@ -65,11 +66,11 @@ def _tanxdivx(x: floatcomplex) -> floatcomplex:
 
     Parameters
     ----------
-    x
-
+    x : float, complex
+        The point at which to evaluate the function.
     Returns
     -------
-
+    float : The real function value at the point.
     """
     # Close to 0, tan(x)/x is just 1, to 15 places of decimal.
     if abs(x) < 1e-10:
@@ -89,13 +90,17 @@ def _unnormalized_core_wavefunction(
 
     Parameters
     ----------
-    x
-    k
-    core_width
+    x : float
+        The position at which to evaluate the wavefunction.
+    k : float, purely real or purely imaginary
+        The wavenumber/momentum of the particle
+    core_width : float
+        The core width of the core-shell quantum dot.
 
     Returns
     -------
-
+    val : float, complex
+        The value of the wavefunction at the point x.
     """
     ksq = k ** 2  # Useful for the higher powers.
     xsq = x ** 2
@@ -123,14 +128,17 @@ def _unnormalized_shell_wavefunction(
 
     Parameters
     ----------
-    x
-    q
-    core_width
-    shell_width
-
+    x : float
+        The position at which to evaluate the wavefunction.
+    q : float, purely real or purely imaginary
+        The wavenumber/momentum of the particle
+    core_width : float
+        The core width of the core-shell quantum dot.
+    shell_width : float
+        The shell width of the core-shell quantum dot.
     Returns
     -------
-
+    float, purely real or purely imaginary : The value of the wavefunction at the point x.
     """
     # This doesn't need the numerical stability shenanigans because we aren't evaluating it at x = 0.
     # But sin(q * shell_width) can still go to 0, technically. This may not happen because of how q is constrained.
