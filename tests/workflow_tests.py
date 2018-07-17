@@ -1,14 +1,11 @@
 import warnings as w
-from scipy.integrate import IntegrationWarning
+
 import numpy as np
 import numpy.testing as test
-import matplotlib.pyplot as plt
-
 from scipy.constants import e
 
-from PyNCband.Material import Material
 from PyNCband.CoreShellParticle import CoreShellParticle
-from PyNCband.scaling import n_
+from PyNCband.Material import Material
 
 AlSb = Material(1.6, -2.9, 0.12, 0.98, 11.0, "AlSb")
 CdS = Material(2.4, -3.5, 0.21, 0.8, 9.4, "CdS")
@@ -24,7 +21,6 @@ x = np.linspace(1, 2, 10)
 
 xx, yy = np.meshgrid(x, x)
 zz = np.zeros_like(xx)
-
 
 CdS_AlSb.set_core_width(0.7)
 # CdS_AlSb.set_shell_width(4)

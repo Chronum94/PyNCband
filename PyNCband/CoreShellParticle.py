@@ -1,19 +1,15 @@
 from typing import Tuple
 
-import numpy as np
 import matplotlib.pyplot as plt
-from scipy.optimize import brentq
-from scipy.integrate import quad, dblquad
+import numpy as np
 from scipy.constants import hbar, e, m_e
-
+from scipy.integrate import quad, dblquad
+from scipy.optimize import brentq
 
 from .Material import Material
 from .physicsfunctions import *
-from .utils import *
 from .scaling import n_
-
-from numba import jit
-
+from .utils import *
 
 __all__ = ["CoreShellParticle"]
 
@@ -217,7 +213,7 @@ class CoreShellParticle:
 
         Returns
         -------
-
+        float : The eelctron-hole overlap integral.
         """
         k_e, q_e, k_h, q_h = self.calculate_wavenumbers() * n_
         K_e, Q_e, K_h, Q_h = (
@@ -259,7 +255,7 @@ class CoreShellParticle:
 
         Returns
         -------
-
+        float : The electron-hole overlap integral and the error in the integral.
         References
         ----------
         .. [1] Piryatinski, A., Ivanov, S. A., Tretiak, S., & Klimov, V. I. (2007). Effect of Quantum and Dielectric
@@ -314,71 +310,74 @@ class CoreShellParticle:
         -------
         float : The minimum core localization radius, in nanometers.
         """
-        if self.h_e:
-            raise LocalizationNotPossibleError(
-                "Electrons will not localize in the core in h/e structures."
+        if self.type_one:
+            raise NotImplementedError
+        elif self.type_two:
+            if self.h_e:
+                raise LocalizationNotPossibleError(
+                    "Electrons will not localize in the core in h/e structures."
+                )
+
+            # EVERYTHING IN THIS FUNCTION HAS BEEN SCALED WITH n_ = 1e-9. There are almost certainly better, more adaptive
+            # ways to scale. But for now, the nano- is our lord and saviour.
+            if shell_width is None:
+                # Scaling to order unity.
+                shell_width = self.shell_width
+
+            m = self.cmat.m_e / self.smat.m_e
+
+            # This could use a cached value. This does not change.
+            # In the Piryatinski 2007 paper, this is used to set a lower bound on the core radius search bracket.
+            # However, I've noticed that this lower bracket often fails. Need to look more into why.
+            x1 = brentq(
+                _x_residual_function, -np.pi + 1e-10, 0, args=(self.cmat.m_e, self.smat.m_e)
             )
 
-        # EVERYTHING IN THIS FUNCTION HAS BEEN SCALED WITH n_ = 1e-9. There are almost certainly better, more adaptive
-        # ways to scale. But for now, the nano- is our lord and saviour.
-        if shell_width is None:
-            # Scaling to order unity.
-            shell_width = self.shell_width
+            # Same for this.
+            # SCALED TO ORDER UNITY.
+            k1 = (2 * self.cmat.m_e * m_e * self.ue) ** 0.5 / hbar * n_
+            # print('k1', k1, 'x1', x1)
+            def min_core_loc_from_shell(r: float) -> float:
+                return shell_width + m * r / (1 - m + 1 / tanxdivx(k1 * r))
 
-        m = self.cmat.m_e / self.smat.m_e
+            if type(x1) == float:
+                # print('x1:', x1, 'k1:', k1)
+                # print('m-ratio:', m)
 
-        # This could use a cached value. This does not change.
-        # In the Piryatinski 2007 paper, this is used to set a lower bound on the core radius search bracket.
-        # However, I've noticed that this lower bracket often fails. Need to look more into why.
-        x1 = brentq(
-            _x_residual_function, -np.pi + 1e-10, 0, args=(self.cmat.m_e, self.smat.m_e)
-        )
-
-        # Same for this.
-        # SCALED TO ORDER UNITY.
-        k1 = (2 * self.cmat.m_e * m_e * self.ue) ** 0.5 / hbar * n_
-        # print('k1', k1, 'x1', x1)
-        def min_core_loc_from_shell(r: float) -> float:
-            return shell_width + m * r / (1 - m + 1 / tanxdivx(k1 * r))
-
-        if type(x1) == float:
-            # print('x1:', x1, 'k1:', k1)
-            # print('m-ratio:', m)
-
-            # print('FHigh-:', min_core_loc_from_shell(np.pi / k1 - 1e-4))
-            lower_bound, upper_bound = x1 / k1, np.pi / k1
-            # print('Low:', lower_bound)
-            # print('High:', upper_bound)
-            # print("FLow:", min_core_loc_from_shell(lower_bound))
-            # print("FHigh:", min_core_loc_from_shell(upper_bound))
-            # plt.plot(min_core_loc_from_shell(np.linspace(lower_bound, upper_bound, 1000)))
-
-            # This is the fallback for the case of where the sign doesn't change, and we have to drop the lower
-            # limit to 0.
-            if (
-                min_core_loc_from_shell(lower_bound)
-                * min_core_loc_from_shell(upper_bound)
-                > 0
-            ):  # No sign change.
+                # print('FHigh-:', min_core_loc_from_shell(np.pi / k1 - 1e-4))
+                lower_bound, upper_bound = x1 / k1, np.pi / k1
+                # print('Low:', lower_bound)
+                # print('High:', upper_bound)
+                # print("FLow:", min_core_loc_from_shell(lower_bound))
+                # print("FHigh:", min_core_loc_from_shell(upper_bound))
                 # plt.plot(min_core_loc_from_shell(np.linspace(lower_bound, upper_bound, 1000)))
-                # plt.show()
 
-                # TODO: This lower bound does not agree with the paper. Need to figure this garbage out.
-                lower_bound, upper_bound = scan_and_bracket(
-                    min_core_loc_from_shell, 1e-12, upper_bound, 10000
-                )
-                # print('FALLBACKLOW:', lower_bound)
-                # print('FALLBACKHIGH:', upper_bound)
-                # print("FBFLOW:", min_core_loc_from_shell(lower_bound))
-                # print('FLow+:', min_core_loc_from_shell(x1 / k1 + 1e-4))
-                # print("FBFHIGH:", min_core_loc_from_shell(upper_bound))
+                # This is the fallback for the case of where the sign doesn't change, and we have to drop the lower
+                # limit to 0.
+                if (
+                    min_core_loc_from_shell(lower_bound)
+                    * min_core_loc_from_shell(upper_bound)
+                    > 0
+                ):  # No sign change.
+                    # plt.plot(min_core_loc_from_shell(np.linspace(lower_bound, upper_bound, 1000)))
+                    # plt.show()
 
-            result = brentq(min_core_loc_from_shell, lower_bound, upper_bound)
+                    # TODO: This lower bound does not agree with the paper. Need to figure this garbage out.
+                    lower_bound, upper_bound = scan_and_bracket(
+                        min_core_loc_from_shell, 1e-12, upper_bound, 10000
+                    )
+                    # print('FALLBACKLOW:', lower_bound)
+                    # print('FALLBACKHIGH:', upper_bound)
+                    # print("FBFLOW:", min_core_loc_from_shell(lower_bound))
+                    # print('FLow+:', min_core_loc_from_shell(x1 / k1 + 1e-4))
+                    # print("FBFHIGH:", min_core_loc_from_shell(upper_bound))
 
-            # Returning with proper scaling.
-            return result
-        else:
-            raise ValueError
+                result = brentq(min_core_loc_from_shell, lower_bound, upper_bound)
+
+                # Returning with proper scaling.
+                return result
+            else:
+                raise ValueError
 
     # TODO: Implement branch for eh/he coreshells.
     def localization_hole_shell(self, core_width: float = None):
@@ -429,7 +428,7 @@ class CoreShellParticle:
         return result
 
     def coulomb_screening_energy(self, relative_tolerance: float = 1e-4):
-        """
+        """ Calculates the Coulomb screening energy. Somewhat slow.
 
         Parameters
         ----------
@@ -476,6 +475,16 @@ class CoreShellParticle:
         ) * norm_e * norm_h
 
     def interface_polarization_energy(self, relative_tolerance: float = 1e-4):
+        """
+
+        Parameters
+        ----------
+        relative_tolerance
+
+        Returns
+        -------
+
+        """
         interface_polarization_operator = make_interface_polarization_operator(self)
 
         k_e, q_e, k_h, q_h = self.calculate_wavenumbers() * n_

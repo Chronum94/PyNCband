@@ -39,6 +39,17 @@ floatarray = Union[float, np.ndarray]
 
 @jit(["float64(float64, float64)"], nopython=True)
 def _heaviside(x1: float, x2: float) -> float:
+    """A custom Heaviside function for number support.
+
+    Parameters
+    ----------
+    x1
+    x2
+
+    Returns
+    -------
+
+    """
     if x1 > 0:
         return 1
     elif x1 == 0:
@@ -50,6 +61,16 @@ def _heaviside(x1: float, x2: float) -> float:
 # @vectorize(nopython=True)
 @jit(["float64(float64)", "complex128(complex128)"], nopython=True)
 def _tanxdivx(x: floatcomplex) -> floatcomplex:
+    """A custom tan(x)/x function for complex purely real or purely imaginary x, stabilized around |x| = 0,
+
+    Parameters
+    ----------
+    x
+
+    Returns
+    -------
+
+    """
     xsq = abs(x) ** 2
     # A simple 2nd order Taylor expansion will be accurate enough this close to 0.
     if abs(x) < 1e-13:
@@ -65,6 +86,18 @@ tanxdivx = np.vectorize(_tanxdivx)  # np.vectorize(_tanxdivx, otypes=(np.complex
 def _unnormalized_core_wavefunction(
     x: float, k: floatcomplex, core_width: float
 ) -> floatcomplex:
+    """Returns the value of the S1 spherically symmetric wavefunction in the core.
+
+    Parameters
+    ----------
+    x
+    k
+    core_width
+
+    Returns
+    -------
+
+    """
     ksq = k ** 2  # Useful for the higher powers.
     xsq = x ** 2
     denom = np.sin(core_width * k)
@@ -87,6 +120,19 @@ unnormalized_core_wavefunction = np.vectorize(
 def _unnormalized_shell_wavefunction(
     x: float, q: floatcomplex, core_width: float, shell_width: float
 ) -> floatcomplex:
+    """Returns the value of the S1 spherically symmetric wavefunction in the shell.
+
+    Parameters
+    ----------
+    x
+    q
+    core_width
+    shell_width
+
+    Returns
+    -------
+
+    """
     # This doesn't need the numerical stability shenanigans because we aren't evaluating it at x = 0.
     # But sin(q * shell_width) can still go to 0, technically. This may not happen because of how q is constrained.
     # Needs testing.
@@ -160,6 +206,7 @@ def _densityfunction(
     core_width: float,
     shell_width: float,
 ) -> float:
+    """Returns the probability density from a wavefunction at a point in the core-shell."""
     return (
         abs(
             _wavefunction(r, core_wavenumber, shell_wavenumber, core_width, shell_width)
@@ -172,7 +219,7 @@ def _densityfunction(
 def wavenumber_from_energy(
     energy: float, mass: float, potential_offset: float = 0
 ) -> floatcomplex:
-    """
+    """ Calculates wavenumber from energy in units of 1/m.
 
     Parameters
     ----------
@@ -328,7 +375,18 @@ def hole_eigenvalue_residual(
 
 @jit(nopython=True)
 def _x_residual_function(x: float, mass_in_core: float, mass_in_shell: float) -> float:
-    """This function finds the lower limit for the interval in which to bracket the core localization radius search."""
+    """This function finds the lower limit for the interval in which to bracket the core localization radius search.
+
+    Parameters
+    ----------
+    x
+    mass_in_core
+    mass_in_shell
+
+    Returns
+    -------
+
+    """
     m = mass_in_shell / mass_in_core
     xsq = x ** 2
     if abs(x) < 1e-13:
@@ -361,6 +419,16 @@ def make_coulomb_screening_operator(coreshellparticle: "CoreShellParticle") -> C
 def make_interface_polarization_operator(
     coreshellparticle: "CoreShellParticle"
 ) -> Callable:
+    """Generates the interface polarization operator from the CoreShellParticle inforamtion.
+
+    Parameters
+    ----------
+    coreshellparticle
+
+    Returns
+    -------
+
+    """
 
     # Scaling lengths to nm units.
     core_width = coreshellparticle.core_width
@@ -383,6 +451,19 @@ def make_interface_polarization_operator(
 def scan_and_bracket(
     f: Callable, lower_bound: float, upper_bound: float, resolution: int
 ) -> Tuple[float, float]:
+    """ Attempts to scan for roots and bracket roots of a function where the function goes from negative to positive.
+
+    Parameters
+    ----------
+    f
+    lower_bound
+    upper_bound
+    resolution
+
+    Returns
+    -------
+
+    """
     x = np.linspace(lower_bound, upper_bound, resolution)
     y = f(x)
 
