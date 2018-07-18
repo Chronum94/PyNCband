@@ -411,29 +411,27 @@ def hole_eigenvalue_residual(
             )
             * n_
         )
-        shell_hole_wavenumber = (
-            wavenumber_from_energy(energy, particle.smat.m_h) * n_
-        )
+        shell_hole_wavenumber = wavenumber_from_energy(energy, particle.smat.m_h) * n_
     elif particle.type_two:
         if particle.e_h:
             core_hole_wavenumber = (
-                wavenumber_from_energy(energy, particle.cmat.m_h, potential_offset=particle.uh) * n_
-            )
-            shell_hole_wavenumber = (
                 wavenumber_from_energy(
-                    energy, particle.smat.m_h
+                    energy, particle.cmat.m_h, potential_offset=particle.uh
                 )
                 * n_
+            )
+            shell_hole_wavenumber = (
+                wavenumber_from_energy(energy, particle.smat.m_h) * n_
             )
         elif particle.h_e:
             core_hole_wavenumber = (
-                wavenumber_from_energy(
-                    energy, particle.cmat.m_h
-                )
-                * n_
+                wavenumber_from_energy(energy, particle.cmat.m_h) * n_
             )
             shell_hole_wavenumber = (
-                wavenumber_from_energy(energy, particle.smat.m_h, potential_offset=particle.uh) * n_
+                wavenumber_from_energy(
+                    energy, particle.smat.m_h, potential_offset=particle.uh
+                )
+                * n_
             )
     core_x = core_hole_wavenumber * particle.core_width
     shell_x = shell_hole_wavenumber * particle.shell_width
@@ -520,9 +518,7 @@ def make_coulomb_screening_operator(coreshellparticle: "CoreShellParticle") -> C
 
         # The two step functions that are used to calculate the charge regions in the Coulomb interaction operator.
         step1, step2 = _heaviside(r_c - r_a, taz), _heaviside(r_c - r_b, taz)
-        val = -step1 * step2 / (
-            rmax * core_eps
-        ) - (1 - step1 + 1 - step2) / (
+        val = -step1 * step2 / (rmax * core_eps) - (1 - step1 + 1 - step2) / (
             2 * rmax * shell_eps
         )
         return val * e / (n_ * eps0)  # Scaling to eV and meters.
@@ -549,6 +545,7 @@ def make_interface_polarization_operator(
     core_eps, shell_eps = coreshellparticle.cmat.eps, coreshellparticle.smat.eps
     particle_radius = coreshellparticle.radius
     env_eps = coreshellparticle.environment_epsilon
+
     @jit(nopython=True)
     def interface_polarization_operator(r_a: float, r_b: float) -> float:
         r_c = core_width

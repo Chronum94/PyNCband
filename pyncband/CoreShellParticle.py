@@ -21,7 +21,7 @@ class CoreShellParticle:
         shell_material: Material,
         core_width: float,
         shell_width: float,
-        environment_epsilon: float = 1.0
+        environment_epsilon: float = 1.0,
     ):
         """Creates a core-shell nanoparticle.
 
@@ -118,7 +118,7 @@ class CoreShellParticle:
         """
         # energy_e, energy_h = None, None
 
-        energy_e, energy_h = self.calculate_s1_energies()
+        energy_e, energy_h = self.calculate_s1_energies(in_ev=False)
         # print('E:', energy_e, energy_h)
         # This gets set to false when we change core/shell radius, etc.
         if self.type_one:
@@ -163,18 +163,23 @@ class CoreShellParticle:
                 )
 
     # This method can currently only find cases where the energy of the lowest state is above the potential step.
-    def calculate_s1_energies(self, bounds=(), resolution=1000) -> Tuple[float, float]:
-        """Calculates eigenenergies of the S1 exciton state in Joules.
+    def calculate_s1_energies(
+        self, bounds=(), resolution=1000, in_ev=True
+    ) -> Tuple[float, float]:
+        """Calculates eigenenergies of the S1 exciton state in eV.
 
         Parameters
         ----------
         bounds : tuple of floats (e_lower, e_higher, h_lower, h_higher)
+
         resolution : int
             The number of points to use when scanning and bracketing.
 
+        in_ev : bool
+            If False, returns energies in Joules.
         Returns
         -------
-        s1_energies : 2-tuple of float, Joules
+        s1_energies : 2-tuple of float, eV or Joules
             The s1 exciton energies of electrons and holes.
         """
 
@@ -207,7 +212,10 @@ class CoreShellParticle:
         self.s1_h = brentq(hole_eigenvalue_residual, *bracket, args=(self,))
         self.energies_valid = True
 
-        return self.s1_e, self.s1_h
+        energy_scale = 1  # remains in Joules.
+        if in_ev:
+            energy_scale = e
+        return self.s1_e / energy_scale, self.s1_h / energy_scale
 
     def plot_electron_wavefunction(
         self, x, core_wavenumber: float, shell_wavenumber: float
@@ -459,7 +467,6 @@ class CoreShellParticle:
             min_shell_loc_from_core, np.pi / (2 * q1) + 1e-13, np.pi / q1 - 1e-13
         )
         return result
-
 
     def coulomb_screening_energy(self, relative_tolerance: float = 1e-4):
         """ Calculates the Coulomb screening energy. Somewhat slow.
