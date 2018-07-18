@@ -21,7 +21,7 @@ class CoreShellParticle:
         shell_material: Material,
         core_width: float,
         shell_width: float,
-        environment_epsilon: float
+        environment_epsilon: float = 1.0
     ):
         """Creates a core-shell nanoparticle.
 
@@ -459,6 +459,7 @@ class CoreShellParticle:
             min_shell_loc_from_core, np.pi / (2 * q1) + 1e-13, np.pi / q1 - 1e-13
         )
         return result
+
 
     def coulomb_screening_energy(self, relative_tolerance: float = 1e-4):
         """ Calculates the Coulomb screening energy. Somewhat slow.

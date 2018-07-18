@@ -2,7 +2,7 @@ from cmath import tan
 
 import numpy as np
 from numpy.lib.scimath import sqrt as csqrt
-from numba import jit, vectorize, float64, complex128
+from numba import jit, float32, float64, complex128
 
 from scipy.constants import hbar, e, m_e, epsilon_0 as eps0
 
@@ -461,28 +461,31 @@ def _x_residual_function(x: float, mass_in_core: float, mass_in_shell: float) ->
 
     Parameters
     ----------
-    x
-    mass_in_core
-    mass_in_shell
+    x : float
+        Size parameter (wavenumber * core radius) in the core of the core-shell quantum dor. From equation 3 in [1].
+    mass_in_core : float, electron-masses
+        Effective mass of the electron/hole in the core of the core-shell quantum dot.
+    mass_in_shell : float, electron-masses
+        Effective mass of the electron/hole in the shell of the core-shell quantum dot.
 
     Returns
     -------
-
+    residual : float
+        The residual of the equation, used in root-finding routines.
 
     References
     ----------
 
-    .. [1] Piryatinski, A., Ivanov, S. A., Tretiak, S., & Klimov, V. I. (2007). Effect of Quantum and Dielectric
-    Confinement on the Exciton−Exciton Interaction Energy in Type II Core/Shell Semiconductor Nanocrystals.
+    .. [1] Piryatinski, A., Ivanov, S. A., Tretiak, S., & Klimov, V. I. (2007). Effect of Quantum and Dielectric \
+    Confinement on the Exciton−Exciton Interaction Energy in Type II Core/Shell Semiconductor Nanocrystals. \
     Nano Letters, 7(1), 108–115. https://doi.org/10.1021/nl0622404
 
     """
-    m = mass_in_shell / mass_in_core
-    xsq = x ** 2
-    if abs(x) < 1e-13:
-        return m - xsq / 3
+    mass_ratio = mass_in_shell / mass_in_core
+    if abs(x) < 1e-10:
+        return mass_ratio
     else:
-        return 1 / _tanxdivx(x) + m - 1
+        return 1 / _tanxdivx(x) + mass_ratio - 1
 
 
 def make_coulomb_screening_operator(coreshellparticle: "CoreShellParticle") -> Callable:
@@ -494,20 +497,32 @@ def make_coulomb_screening_operator(coreshellparticle: "CoreShellParticle") -> C
 
     Returns
     -------
+    coulomb_screening_operator : Callable(r1, r2)
+        The Coulomb screening operator as a function of the two radial coordinates of the two excitons.
+
+    References
+    ----------
+
+    .. [1] Piryatinski, A., Ivanov, S. A., Tretiak, S., & Klimov, V. I. (2007). Effect of Quantum and Dielectric \
+    Confinement on the Exciton−Exciton Interaction Energy in Type II Core/Shell Semiconductor Nanocrystals. \
+    Nano Letters, 7(1), 108–115. https://doi.org/10.1021/nl0622404
 
     """
 
     core_width = coreshellparticle.core_width
     core_eps, shell_eps = coreshellparticle.cmat.eps, coreshellparticle.smat.eps
 
-    @jit(nopython=True)
+    @jit([float32(float32, float32)], nopython=True)
     def coulomb_screening_operator(r_a: float, r_b: float) -> float:
         rmax = max(r_a, r_b)
         r_c = core_width
         taz = 0.5  # Theta at zero, theta being step function.
-        val = -_heaviside(r_c - r_a, taz) * _heaviside(r_c - r_b, taz) / (
+
+        # The two step functions that are used to calculate the charge regions in the Coulomb interaction operator.
+        step1, step2 = _heaviside(r_c - r_a, taz), _heaviside(r_c - r_b, taz)
+        val = -step1 * step2 / (
             rmax * core_eps
-        ) - (_heaviside(r_a - r_c, taz) + _heaviside(r_b - r_c, taz)) / (
+        ) - (1 - step1 + 1 - step2) / (
             2 * rmax * shell_eps
         )
         return val * e / (n_ * eps0)  # Scaling to eV and meters.
