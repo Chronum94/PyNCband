@@ -31,15 +31,15 @@ from pyncband import *
 # Declare a material with a bandgap of 1.34 eV, conduction band edge offset of 0,
 # electron(hole) effective mass of 0.07(0.64), and dielectric constant of 9.6. Optionally,
 # give it a name.
-InP = Material.Material(1.34, 0, 0.07, 0.64, 9.6, 'InP')
+InP = Material(1.34, 0, 0.07, 0.64, 9.6, 'InP')
 
 # The conduction band edge is different here. For a core-shell nanocrystal, only the
 # relative offset matters.
-CdS = Material.Material(2.20, -0.39, 0.21, 0.68, 5.3, 'CdS')
+CdS = Material(2.20, -0.39, 0.21, 0.68, 5.3, 'CdS')
 
 # Create a CoreShellParticle with the two materials, the core and shell thicknesses in nm.
 # Optionally, supply a permittivity for the environment of the nanocrystal, if it isn't 1.
-csnc = CoreShellParticle.CoreShellParticle(InP, CdS, 1.23, 3.84, 1.5)
+csnc = CoreShellParticle(InP, CdS, 1.23, 3.84, 1.5)
 
 # This is a type two, h/e structure. Both of these should be true.
 print("Is CSNC type two? h/e?", csnc.type_two, csnc.h_e)
@@ -61,4 +61,4 @@ print('Col:', col_energy, 'Pol:', pol_energy)
 print(csnc.bandgap)
 # The excitation energy of the 1S exciton.
 print(csnc.bandgap + np.sum(energies) + col_energy[0] + pol_energy[0])
-    ```
+```

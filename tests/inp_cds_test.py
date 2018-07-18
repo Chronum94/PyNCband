@@ -3,12 +3,12 @@ from scipy.constants import e
 
 from pyncband import *
 
-@profile
-def main():
-    InP = Material.Material(1.34, 0, 0.07, 0.64, 9.6, 'InP')
-    CdS = Material.Material(2.20, -0.39, 0.21, 0.68, 5.3, 'CdS')
 
-    csnc = CoreShellParticle.CoreShellParticle(InP, CdS, 1.23, 3.84, 1.5)
+def main():
+    InP = Material(1.34, 0, 0.07, 0.64, 9.6, 'InP')
+    CdS = Material(2.20, -0.39, 0.21, 0.68, 5.3, 'CdS')
+
+    csnc = CoreShellParticle(InP, CdS, 1.23, 3.84, 1.5)
     print("Is CSNC type two? h/e?", csnc.type_two, csnc.h_e)
     energies = np.array(csnc.calculate_s1_energies()) / e
     print(energies)
