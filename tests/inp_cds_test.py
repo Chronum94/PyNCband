@@ -15,9 +15,11 @@ def main():
     col_energy = csnc.coulomb_screening_energy()
     pol_energy = csnc.interface_polarization_energy()
     print("Col:", col_energy, "Pol:", pol_energy)
-    print(csnc.bandgap)
-    print(csnc.bandgap + np.sum(energies) + col_energy[0] + pol_energy[0])
-    print(csnc.uh / e)
+    print("NC bandgap:", csnc.bandgap)
+    print(
+        "Net 1S energy:",
+        csnc.bandgap + np.sum(energies) + col_energy[0] + pol_energy[0],
+    )
 
 
 if __name__ == "__main__":

@@ -45,9 +45,10 @@ csnc = CoreShellParticle(InP, CdS, 1.23, 3.84, 1.5)
 print("Is CSNC type two? h/e?", csnc.type_two, csnc.h_e)
 
 # Calculate energies, in eV
-energies = np.array(csnc.calculate_s1_energies()) / e
+energies = np.array(csnc.calculate_s1_energies())
 
 # Print them out, because why not.
+# Should be [0.09009009 0.27527528]
 print(energies)
 
 # Calculate the Coulomb screening energy, this is in eV already.
@@ -55,10 +56,12 @@ print(energies)
 col_energy = csnc.coulomb_screening_energy()
 # The polarization interaction energy, also in eV already.
 pol_energy = csnc.interface_polarization_energy()
+
+# Col: [-1.50293370e-03  5.56435081e-07] Pol: [-1.98701001e-03  4.79341560e-07]
 print('Col:', col_energy, 'Pol:', pol_energy)
 
 # The bandgap of the QD.
-print(csnc.bandgap)
+print("NC bandgap:", csnc.bandgap)
 # The excitation energy of the 1S exciton.
-print(csnc.bandgap + np.sum(energies) + col_energy[0] + pol_energy[0])
+print("Net 1S energy:", csnc.bandgap + np.sum(energies) + col_energy[0] + pol_energy[0])
 ```
