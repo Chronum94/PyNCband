@@ -21,6 +21,7 @@ class CoreShellParticle:
         shell_material: Material,
         core_width: float,
         shell_width: float,
+        environment_epsilon: float
     ):
         """Creates a core-shell nanoparticle.
 
@@ -60,6 +61,8 @@ class CoreShellParticle:
         self.bandgap = min(self.cmat.cbe, self.smat.cbe) - max(
             self.cmat.vbe, self.smat.vbe
         )
+
+        self.environment_epsilon = environment_epsilon
 
     def set_core_width(self, x):
         """
@@ -160,7 +163,7 @@ class CoreShellParticle:
                 )
 
     # This method can currently only find cases where the energy of the lowest state is above the potential step.
-    def calculate_s1_energies(self, bounds=(), resolution=10000) -> Tuple[float, float]:
+    def calculate_s1_energies(self, bounds=(), resolution=1000) -> Tuple[float, float]:
         """Calculates eigenenergies of the S1 exciton state in Joules.
 
         Parameters
@@ -523,7 +526,7 @@ class CoreShellParticle:
 
         k_e, q_e, k_h, q_h = self.calculate_wavenumbers() * n_
         norm_e, norm_h = self._normalization()
-        print("L484: norms", norm_e, norm_e)
+        # print("L484: norms", norm_e, norm_e)
         # Electron/hole density functions.
         def edf(x):
             return (
@@ -544,7 +547,7 @@ class CoreShellParticle:
                 * interface_polarization_operator(r1, r2)
             )
 
-        print("L504, wnums", k_e, q_e, k_h, q_h)
+        # print("L504, wnums", k_e, q_e, k_h, q_h)
         return (
             np.array(
                 dblquad(
@@ -609,4 +612,4 @@ class CoreShellParticle:
             self.norm_e = 1 / electron_density_integral
             self.norm_h = 1 / hole_density_integral
             self.norm_valid = True
-            return self.norm_e, self.norm_e
+            return self.norm_e, self.norm_h

@@ -22,7 +22,7 @@ x = np.linspace(1, 2, 10)
 xx, yy = np.meshgrid(x, x)
 zz = np.zeros_like(xx)
 
-CdS_AlSb.set_core_width(2)
+CdS_AlSb.set_core_width(0.2)
 # CdS_AlSb.set_shell_width(4)
 with w.catch_warnings() as wfil:
     w.simplefilter("error", RuntimeWarning)

@@ -533,7 +533,7 @@ def make_interface_polarization_operator(
     core_width = coreshellparticle.core_width
     core_eps, shell_eps = coreshellparticle.cmat.eps, coreshellparticle.smat.eps
     particle_radius = coreshellparticle.radius
-
+    env_eps = coreshellparticle.environment_epsilon
     @jit(nopython=True)
     def interface_polarization_operator(r_a: float, r_b: float) -> float:
         r_c = core_width
@@ -541,7 +541,7 @@ def make_interface_polarization_operator(
         taz = 0.5  # Theta at zero, theta being step function.
         val = -_heaviside(r_c - r_a, taz) * _heaviside(r_c - r_b, taz) * (
             core_eps / shell_eps - 1
-        ) / (r_c * core_eps) - (shell_eps - 1) / (2 * r_p * shell_eps)
+        ) / (r_c * core_eps) - (shell_eps / env_eps - 1) / (2 * r_p * shell_eps)
         return val * e / (n_ * eps0)  # Scaling with physical quantities.
 
     return interface_polarization_operator
