@@ -403,7 +403,7 @@ def hole_eigenvalue_residual(
         https://doi.org/10.1002/smll.200800841
 
     """
-    core_hole_wavenumber, shell_electron_wavenumber = None, None
+    core_hole_wavenumber, shell_hole_wavenumber = None, None
     if particle.type_one:
         core_hole_wavenumber = (
             wavenumber_from_energy(
@@ -411,32 +411,32 @@ def hole_eigenvalue_residual(
             )
             * n_
         )
-        shell_electron_wavenumber = (
+        shell_hole_wavenumber = (
             wavenumber_from_energy(energy, particle.smat.m_h) * n_
         )
     elif particle.type_two:
         if particle.e_h:
             core_hole_wavenumber = (
-                wavenumber_from_energy(energy, particle.cmat.m_h) * n_
+                wavenumber_from_energy(energy, particle.cmat.m_h, potential_offset=particle.uh) * n_
             )
-            shell_electron_wavenumber = (
+            shell_hole_wavenumber = (
                 wavenumber_from_energy(
-                    energy, particle.smat.m_h, potential_offset=particle.uh
+                    energy, particle.smat.m_h
                 )
                 * n_
             )
         elif particle.h_e:
             core_hole_wavenumber = (
                 wavenumber_from_energy(
-                    energy, particle.cmat.m_h, potential_offset=particle.uh
+                    energy, particle.cmat.m_h
                 )
                 * n_
             )
-            shell_electron_wavenumber = (
-                wavenumber_from_energy(energy, particle.smat.m_h) * n_
+            shell_hole_wavenumber = (
+                wavenumber_from_energy(energy, particle.smat.m_h, potential_offset=particle.uh) * n_
             )
     core_x = core_hole_wavenumber * particle.core_width
-    shell_x = shell_electron_wavenumber * particle.shell_width
+    shell_x = shell_hole_wavenumber * particle.shell_width
     core_width = particle.core_width
     shell_width = particle.shell_width
     mass_ratio = particle.smat.m_h / particle.cmat.m_h
