@@ -415,9 +415,9 @@ class CoreShellParticle:
                 ):  # No sign change.
                     # plt.plot(min_core_loc_from_shell(np.linspace(lower_bound, upper_bound, 1000)))
                     # plt.show()
-                    warn(
-                        "Lowering localization search limit. This goes against the paper."
-                    )
+                    # warn(
+                    #     "Lowering localization search limit. This goes against the paper."
+                    # )
                     # TODO: This lower bound does not agree with the paper. Need to figure this garbage out.
                     lower_bound, upper_bound = scan_and_bracket(
                         min_core_loc_from_shell, 0, upper_bound, 10000
@@ -554,9 +554,9 @@ class CoreShellParticle:
                 ):  # No sign change.
                     # plt.plot(min_core_loc_from_shell(np.linspace(lower_bound, upper_bound, 1000)))
                     # plt.show()
-                    warn(
-                        "Lowering localization search limit. This goes against the paper."
-                    )
+                    # warn(
+                    #     "Lowering localization search limit. This goes against the paper."
+                    # )
                     # TODO: This lower bound does not agree with the paper. Need to figure this garbage out.
                     lower_bound, upper_bound = scan_and_bracket(
                         min_core_loc_from_shell, 0, upper_bound, resolution

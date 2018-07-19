@@ -275,11 +275,10 @@ def wavenumber_from_energy(
 
     Returns
     -------
-
+    wavenumber: float 1 / m
     """
 
-    # The energies supplied to this are already in Joules. Relax.
-    # TODO: Convert this to hbar in eV-s, then energies in eV.
+
     return csqrt(2 * mass * m_e * (energy - potential_offset)) / hbar
 
 
