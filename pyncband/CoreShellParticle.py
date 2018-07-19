@@ -1,4 +1,9 @@
+"""This module implements a CoreShellParticle class. It contains the necessary methods to carry out the first-order
+order physics that we consider.
+
+"""
 from typing import Tuple
+from warnings import warn
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -17,10 +22,10 @@ __all__ = ["CoreShellParticle"]
 class CoreShellParticle:
     def __init__(
         self,
-        core_material: Material,
-        shell_material: Material,
-        core_width: float,
-        shell_width: float,
+        core_material: Material = None,
+        shell_material: Material = None,
+        core_width: float = None,
+        shell_width: float = None,
         environment_epsilon: float = 1.0,
     ):
         """Creates a core-shell nanoparticle.
@@ -31,7 +36,14 @@ class CoreShellParticle:
         shell_material : Material
         core_width : float, nanometers
         shell_width : float, nanometers
+
         """
+
+        # Preliminary asserts.
+        assert core_material is not None
+        assert shell_material is not None
+        assert core_width is not None
+        assert shell_width is not None
 
         self.cmat = core_material
         self.smat = shell_material
@@ -333,7 +345,7 @@ class CoreShellParticle:
         """Prints the wavefunction at 0."""
         print(_wavefunction(0, self.calculate_wavenumbers()[0], self.core_width))
 
-    # TODO: Implement branch for eh/he coreshells.
+
     def localization_electron_core(self, shell_width: float = None):
         """Minimum core width for localization of electron for a given shell width.
 
@@ -347,6 +359,7 @@ class CoreShellParticle:
         -------
         localization_width : float, nanometers
             The minimum core localization radius.
+
         """
         if self.type_one:
             raise NotImplementedError
@@ -402,7 +415,9 @@ class CoreShellParticle:
                 ):  # No sign change.
                     # plt.plot(min_core_loc_from_shell(np.linspace(lower_bound, upper_bound, 1000)))
                     # plt.show()
-
+                    warn(
+                        "Lowering localization search limit. This goes against the paper."
+                    )
                     # TODO: This lower bound does not agree with the paper. Need to figure this garbage out.
                     lower_bound, upper_bound = scan_and_bracket(
                         min_core_loc_from_shell, 0, upper_bound, 10000
@@ -420,7 +435,146 @@ class CoreShellParticle:
             else:
                 raise ValueError
 
-    # TODO: Implement branch for eh/he coreshells.
+
+
+    def localization_electron_shell(self, core_width: float = None):
+        """Minimum shell width for localization of electron for a given core width.
+
+        Parameters
+        ----------
+        core_width : float, nanometers
+            The core width for which to calculate the shell localization width. If no value is given, the coreshell's
+            current core width is used.
+
+        Returns
+        -------
+        float, nanometers. : The minimum shell localization radius.
+
+        """
+        if self.e_h:
+            raise LocalizationNotPossibleError(
+                "Electrons will not localize in the shell in e/h structures."
+            )
+
+        # EVERYTHING IN THIS FUNCTION HAS BEEN SCALED WITH n_ = 1e-9. There are almost certainly better, more adaptive
+        # ways to scale. But for now, the nano- is our lord and saviour.
+        if core_width is None:
+            # Scaling to order unity.
+            core_width = self.core_width
+
+        # This could use a cached value. This does not change.
+        # In the Piryatinski 2007 paper, this is used to set a lower bound on the core radius search bracket.
+        # However, I've noticed that this lower bracket often fails. Need to look more into why.
+
+        # Same for this.
+        # SCALED TO ORDER UNITY.
+        q1 = (2 * self.smat.m_e * m_e * self.ue) ** 0.5 / hbar * n_
+        # print('k1', k1, 'x1', x1)
+        def min_shell_loc_from_core(h: float) -> float:
+            return core_width + np.tan(q1 * h) * q1
+
+            # print('FALLBACKLOW:', lower_bound)
+            # print('FALLBACKHIGH:', upper_bound)
+            # print("FBFLOW:", min_core_loc_from_shell(lower_bound))
+            # print('FLow+:', min_core_loc_from_shell(x1 / k1 + 1e-4))
+            # print("FBFHIGH:", min_core_loc_from_shell(upper_bound))
+
+        result = brentq(
+            min_shell_loc_from_core, np.pi / (2 * q1) + 1e-13, np.pi / q1 - 1e-13
+        )
+        return result
+
+
+    def localization_hole_core(self, shell_width: float = None, resolution = 1000):
+        """Minimum core width for localization of holes for a given shell width.
+
+        Parameters
+        ----------
+        shell_width : float, nanometers
+            The shell width for which to calculate the core localization width. If no value is given, the coreshell's
+            current shell width is used.
+
+        Returns
+        -------
+        localization_width : float, nanometers
+            The minimum core localization radius.
+
+        """
+        if self.type_one:
+            raise NotImplementedError
+        elif self.type_two:
+            if self.e_h:
+                raise LocalizationNotPossibleError(
+                    "Holes will not localize in the core in e/h structures."
+                )
+
+            # EVERYTHING IN THIS FUNCTION HAS BEEN SCALED WITH n_ = 1e-9. There are almost certainly better, more adaptive
+            # ways to scale. But for now, the nano- is our lord and saviour.
+            if shell_width is None:
+                # Scaling to order unity.
+                shell_width = self.shell_width
+
+            m = self.cmat.m_h / self.smat.m_h
+
+            # This could use a cached value. This does not change.
+            # In the Piryatinski 2007 paper, this is used to set a lower bound on the core radius search bracket.
+            # However, I've noticed that this lower bracket often fails. Need to look more into why.
+            x1 = brentq(
+                _x_residual_function,
+                -np.pi + 1e-10,
+                0,
+                args=(self.cmat.m_e, self.smat.m_e),
+            )
+
+            # Same for this.
+            # SCALED TO ORDER UNITY.
+            k1 = (2 * self.cmat.m_h * m_e * self.uh) ** 0.5 / hbar * n_
+            # print('k1', k1, 'x1', x1)
+            def min_core_loc_from_shell(r: float) -> float:
+                return shell_width + m * r / (1 - m + 1 / tanxdivx(k1 * r))
+
+            if type(x1) == float:
+                # print('x1:', x1, 'k1:', k1)
+                # print('m-ratio:', m)
+
+                # print('FHigh-:', min_core_loc_from_shell(np.pi / k1 - 1e-4))
+                lower_bound, upper_bound = x1 / k1, np.pi / k1
+                # print('Low:', lower_bound)
+                # print('High:', upper_bound)
+                # print("FLow:", min_core_loc_from_shell(lower_bound))
+                # print("FHigh:", min_core_loc_from_shell(upper_bound))
+                # plt.plot(min_core_loc_from_shell(np.linspace(lower_bound, upper_bound, 1000)))
+
+                # This is the fallback for the case of where the sign doesn't change, and we have to drop the lower
+                # limit to 0.
+                if (
+                    min_core_loc_from_shell(lower_bound)
+                    * min_core_loc_from_shell(upper_bound)
+                    > 0
+                ):  # No sign change.
+                    # plt.plot(min_core_loc_from_shell(np.linspace(lower_bound, upper_bound, 1000)))
+                    # plt.show()
+                    warn(
+                        "Lowering localization search limit. This goes against the paper."
+                    )
+                    # TODO: This lower bound does not agree with the paper. Need to figure this garbage out.
+                    lower_bound, upper_bound = scan_and_bracket(
+                        min_core_loc_from_shell, 0, upper_bound, resolution
+                    )
+                    # print('FALLBACKLOW:', lower_bound)
+                    # print('FALLBACKHIGH:', upper_bound)
+                    # print("FBFLOW:", min_core_loc_from_shell(lower_bound))
+                    # print('FLow+:', min_core_loc_from_shell(x1 / k1 + 1e-4))
+                    # print("FBFHIGH:", min_core_loc_from_shell(upper_bound))
+
+                result = brentq(min_core_loc_from_shell, lower_bound, upper_bound)
+
+                # Returning with proper scaling.
+                return result
+            else:
+                raise ValueError
+
+
     def localization_hole_shell(self, core_width: float = None):
         """Minimum core width for localization of electron for a given shell width.
 
@@ -479,6 +633,7 @@ class CoreShellParticle:
         Returns
         -------
         2-array of floats: The Coulomb screening energy and error.
+
         """
         coulomb_screening_operator = make_coulomb_screening_operator(self)
         k_e, q_e, k_h, q_h = self.calculate_wavenumbers() * n_
@@ -503,8 +658,68 @@ class CoreShellParticle:
             * coulomb_screening_operator(r1, r2)
         )
 
+        piecewise_discontinuity_exclusion = 0.0
+
         # Energy returned in units of eV.
-        return (
+        # r1 < R, r2 < R
+        integral_region_one = np.array(
+            dblquad(
+                coulomb_integrand,
+                0,
+                self.core_width,
+                0,
+                self.core_width,
+                epsrel=relative_tolerance,
+            )
+        )
+
+        # r1 > R, r2 < R
+        integral_region_two = np.array(
+            dblquad(
+                coulomb_integrand,
+                self.core_width + piecewise_discontinuity_exclusion,
+                self.radius,
+                0,
+                self.core_width,
+                epsrel=relative_tolerance,
+            )
+        )
+
+        # r1 > R, r2 > R
+        integral_region_three = np.array(
+            dblquad(
+                coulomb_integrand,
+                self.core_width + piecewise_discontinuity_exclusion,
+                self.radius,
+                self.core_width + piecewise_discontinuity_exclusion,
+                self.radius,
+                epsrel=relative_tolerance,
+            )
+        )
+
+        # r1 < R, r2 > R
+        integral_region_four = np.array(
+            dblquad(
+                coulomb_integrand,
+                0,
+                self.core_width,
+                self.core_width + piecewise_discontinuity_exclusion,
+                self.radius,
+                epsrel=relative_tolerance,
+            )
+        )
+        sectioned_integral = (
+            (
+                integral_region_one
+                + integral_region_two
+                + integral_region_three
+                + integral_region_four
+            )
+            * norm_h
+            * norm_e
+        )
+
+        whole_integral = (
             np.array(
                 dblquad(
                     coulomb_integrand,
@@ -518,6 +733,8 @@ class CoreShellParticle:
             * norm_e
             * norm_h
         )
+        # print("Whole integral vs sectioned integral:", whole_integral, sectioned_integral)
+        return whole_integral, sectioned_integral
 
     def interface_polarization_energy(self, relative_tolerance: float = 1e-4):
         """
@@ -530,6 +747,7 @@ class CoreShellParticle:
         -------
 
         """
+
         interface_polarization_operator = make_interface_polarization_operator(self)
 
         k_e, q_e, k_h, q_h = self.calculate_wavenumbers() * n_
@@ -556,7 +774,68 @@ class CoreShellParticle:
             )
 
         # print("L504, wnums", k_e, q_e, k_h, q_h)
-        return (
+        piecewise_discontinuity_exclusion = 0.0
+        # Energy returned in units of eV.
+        # r1 < R, r2 < R
+        integral_region_one = np.array(
+            dblquad(
+                polarization_integrand,
+                0,
+                self.core_width,
+                0,
+                self.core_width,
+                epsrel=relative_tolerance,
+            )
+        )
+
+        # r1 > R, r2 < R
+        integral_region_two = np.array(
+            dblquad(
+                polarization_integrand,
+                self.core_width + piecewise_discontinuity_exclusion,
+                self.radius,
+                0,
+                self.core_width,
+                epsrel=relative_tolerance,
+            )
+        )
+
+        # r1 > R, r2 > R
+        integral_region_three = np.array(
+            dblquad(
+                polarization_integrand,
+                self.core_width + piecewise_discontinuity_exclusion,
+                self.radius,
+                self.core_width + piecewise_discontinuity_exclusion,
+                self.radius,
+                epsrel=relative_tolerance,
+            )
+        )
+
+        # r1 < R, r2 > R
+        integral_region_four = np.array(
+            dblquad(
+                polarization_integrand,
+                0,
+                self.core_width,
+                self.core_width + piecewise_discontinuity_exclusion,
+                self.radius,
+                epsrel=relative_tolerance,
+            )
+        )
+
+        sectioned_integral = (
+            (
+                integral_region_one
+                + integral_region_two
+                + integral_region_three
+                + integral_region_four
+            )
+            * norm_e
+            * norm_h
+        )
+
+        whole_integral = (
             np.array(
                 dblquad(
                     polarization_integrand,
@@ -570,6 +849,7 @@ class CoreShellParticle:
             * norm_e
             * norm_h
         )
+        return whole_integral, sectioned_integral
 
     # This is likely to get refactored later to return types.
     def _is_type_one(self):

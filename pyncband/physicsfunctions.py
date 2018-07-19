@@ -510,7 +510,7 @@ def make_coulomb_screening_operator(coreshellparticle: "CoreShellParticle") -> C
     core_width = coreshellparticle.core_width
     core_eps, shell_eps = coreshellparticle.cmat.eps, coreshellparticle.smat.eps
 
-    @jit([float32(float32, float32)], nopython=True)
+    @jit([float64(float64, float64)], nopython=True)
     def coulomb_screening_operator(r_a: float, r_b: float) -> float:
         rmax = max(r_a, r_b)
         r_c = core_width
