@@ -513,14 +513,14 @@ def make_coulomb_screening_operator(coreshellparticle: "CoreShellParticle") -> C
     def coulomb_screening_operator(r_a: float, r_b: float) -> float:
         rmax = max(r_a, r_b)
         r_c = core_width
-        taz = 0.5  # Theta at zero, theta being step function.
+        taz = 1.0  # Theta at zero, theta being step function.
 
         # The two step functions that are used to calculate the charge regions in the Coulomb interaction operator.
         step1, step2 = _heaviside(r_c - r_a, taz), _heaviside(r_c - r_b, taz)
         val = -step1 * step2 / (rmax * core_eps) - (1 - step1 + 1 - step2) / (
             2 * rmax * shell_eps
         )
-        return val * e / (n_ * eps0)  # Scaling to eV and meters.
+        return val * e / (n_ * eps0) * 1 / (4.0 * np.pi)  # Scaling to eV and meters.
 
     return coulomb_screening_operator
 
@@ -549,11 +549,11 @@ def make_interface_polarization_operator(
     def interface_polarization_operator(r_a: float, r_b: float) -> float:
         r_c = core_width
         r_p = particle_radius
-        taz = 0.5  # Theta at zero, theta being step function.
+        taz = 1.0  # Theta at zero, theta being step function.
         val = -_heaviside(r_c - r_a, taz) * _heaviside(r_c - r_b, taz) * (
             core_eps / shell_eps - 1
         ) / (r_c * core_eps) - (shell_eps / env_eps - 1) / (2 * r_p * shell_eps)
-        return val * e / (n_ * eps0)  # Scaling with physical quantities.
+        return val * e / (n_ * eps0) * 1 / (4.0 * np.pi) # Scaling with physical quantities.
 
     return interface_polarization_operator
 

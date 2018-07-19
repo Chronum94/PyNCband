@@ -8,8 +8,10 @@ from warnings import warn
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.constants import hbar, e, m_e
-from scipy.integrate import quad, dblquad
+from scipy.integrate import quad, dblquad, romb
 from scipy.optimize import brentq
+from quadpy import quadrilateral as quadri
+
 
 from .Material import Material
 from .physicsfunctions import *
@@ -622,13 +624,16 @@ class CoreShellParticle:
         )
         return result
 
-    def coulomb_screening_energy(self, relative_tolerance: float = 1e-4):
+
+    def coulomb_screening_energy(self, relative_tolerance: float = 1e-5, plot_integrand: bool = False):
         """ Calculates the Coulomb screening energy. Somewhat slow.
 
         Parameters
         ----------
-        relative_tolerance: float
-            The relative tolerance for the Coulomb screening energy integral. Defaults to 1e-3.
+        relative_tolerance : float
+            The relative tolerance for the Coulomb screening energy integral. Defaults to 1e-5.
+
+        plot_integrand : bool
 
         Returns
         -------
@@ -719,24 +724,43 @@ class CoreShellParticle:
             * norm_e
         )
 
-        whole_integral = (
-            np.array(
-                dblquad(
-                    coulomb_integrand,
-                    0,
-                    self.radius,
-                    0,
-                    self.radius,
-                    epsrel=relative_tolerance,
-                )
-            )
-            * norm_e
-            * norm_h
-        )
-        # print("Whole integral vs sectioned integral:", whole_integral, sectioned_integral)
-        return whole_integral, sectioned_integral
+        #!!! DO NOT DELETE THIS CODE. THIS CODE IS A TESTAMENT TO THE LIMITATIONS OF QUADRATURE ALGORITHMS.
+        # whole_integral = (
+        #     np.array(
+        #         dblquad(
+        #             coulomb_integrand,
+        #             0,
+        #             self.radius,
+        #             0,
+        #             self.radius,
+        #             epsrel=relative_tolerance,
+        #         )
+        #     )
+        #     * norm_e
+        #     * norm_h
+        # )
+        if plot_integrand:
+            r, dr = np.linspace(1e-13, self.radius, 128, retstep = True)
+            r1, r2 = np.meshgrid(r, r)
+            coulomb_integrand = np.vectorize(coulomb_integrand)
+            zz = coulomb_integrand(r1, r2)
+            plt.imshow(zz, extent=[0, self.radius, self.radius, 0])
+            plt.hlines(self.core_width, xmin=0, xmax=self.radius, linestyles='dotted', label='H-shell')
+            plt.vlines(self.core_width, ymin=0, ymax=self.radius, linestyles='dotted', label='V-core')
+            plt.colorbar()
+            plt.xlabel('Electron($r_a$) coordinate')
+            plt.ylabel('Hole($r_b$) coordinate')
+            plt.title('Coulomb integrand')
+            plt.show()
+        #
+        #
+        #!!! ALSO THIS. THIS IS A ROMBERG INTEGRAL TO SHOW US THAT THE PIECEWISE APPROACH IS CORRECT.
+        # trapzed = romb(romb(zz)) * dr * dr * norm_e * norm_h
+        # print(whole_integral[0], sectioned_integral[0], trapzed)
+        return sectioned_integral
 
-    def interface_polarization_energy(self, relative_tolerance: float = 1e-4):
+
+    def interface_polarization_energy(self, relative_tolerance: float = 1e-5, plot_integrand: bool = False):
         """
 
         Parameters
@@ -835,21 +859,39 @@ class CoreShellParticle:
             * norm_h
         )
 
-        whole_integral = (
-            np.array(
-                dblquad(
-                    polarization_integrand,
-                    0,
-                    self.radius,
-                    0,
-                    self.radius,
-                    epsrel=relative_tolerance,
-                )
-            )
-            * norm_e
-            * norm_h
-        )
-        return whole_integral, sectioned_integral
+        #!!! DO NOT DELETE THIS CODE. THIS CODE IS A TESTAMENT TO THE LIMITATIONS OF QUADRATURE ALGORITHMS.
+        # whole_integral = (
+        #     np.array(
+        #         dblquad(
+        #             polarization_integrand,
+        #             0,
+        #             self.radius,
+        #             0,
+        #             self.radius,
+        #             epsrel=relative_tolerance,
+        #         )
+        #     )
+        #     * norm_e
+        #     * norm_h
+        # )
+        if plot_integrand:
+            r, dr = np.linspace(1e-13, self.radius, 128, retstep = True)
+            r1, r2 = np.meshgrid(r, r)
+            polarization_integrand = np.vectorize(polarization_integrand)
+            zz = polarization_integrand(r1, r2)
+            plt.imshow(zz, extent=[0, self.radius, self.radius, 0])
+            plt.hlines(self.core_width, xmin=0, xmax=self.radius, linestyles='dotted', label='H-shell')
+            plt.vlines(self.core_width, ymin=0, ymax=self.radius, linestyles='dotted', label='V-core')
+            plt.colorbar()
+            plt.xlabel('Electron($r_a$) coordinate')
+            plt.ylabel('Hole($r_b$) coordinate')
+            plt.title('Polarization integrand')
+            plt.show()
+
+
+
+        # trapzed = romb(romb(zz)) * dr * dr * norm_e * norm_h
+        return sectioned_integral
 
     # This is likely to get refactored later to return types.
     def _is_type_one(self):
@@ -875,9 +917,7 @@ class CoreShellParticle:
             k_e, q_e, k_h, q_h = self.calculate_wavenumbers() * n_
             # print(k_h)
             electron_density_integral = (
-                4
-                * np.pi
-                * quad(
+                quad(
                     lambda x: x
                     * x
                     * _densityfunction(x, k_e, q_e, self.core_width, self.shell_width),
@@ -886,9 +926,7 @@ class CoreShellParticle:
                 )[0]
             )
             hole_density_integral = (
-                4
-                * np.pi
-                * quad(
+                quad(
                     lambda x: x
                     * x
                     * _densityfunction(x, k_h, q_h, self.core_width, self.shell_width),
