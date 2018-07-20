@@ -278,7 +278,6 @@ def wavenumber_from_energy(
     wavenumber: float 1 / m
     """
 
-
     return csqrt(2 * mass * m_e * (energy - potential_offset)) / hbar
 
 
@@ -553,7 +552,9 @@ def make_interface_polarization_operator(
         val = -_heaviside(r_c - r_a, taz) * _heaviside(r_c - r_b, taz) * (
             core_eps / shell_eps - 1
         ) / (r_c * core_eps) - (shell_eps / env_eps - 1) / (2 * r_p * shell_eps)
-        return val * e / (n_ * eps0) * 1 / (4.0 * np.pi) # Scaling with physical quantities.
+        return (
+            val * e / (n_ * eps0) * 1 / (4.0 * np.pi)
+        )  # Scaling with physical quantities.
 
     return interface_polarization_operator
 

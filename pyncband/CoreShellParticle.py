@@ -347,7 +347,6 @@ class CoreShellParticle:
         """Prints the wavefunction at 0."""
         print(_wavefunction(0, self.calculate_wavenumbers()[0], self.core_width))
 
-
     def localization_electron_core(self, shell_width: float = None):
         """Minimum core width for localization of electron for a given shell width.
 
@@ -437,8 +436,6 @@ class CoreShellParticle:
             else:
                 raise ValueError
 
-
-
     def localization_electron_shell(self, core_width: float = None):
         """Minimum shell width for localization of electron for a given core width.
 
@@ -486,8 +483,7 @@ class CoreShellParticle:
         )
         return result
 
-
-    def localization_hole_core(self, shell_width: float = None, resolution = 1000):
+    def localization_hole_core(self, shell_width: float = None, resolution=1000):
         """Minimum core width for localization of holes for a given shell width.
 
         Parameters
@@ -576,7 +572,6 @@ class CoreShellParticle:
             else:
                 raise ValueError
 
-
     def localization_hole_shell(self, core_width: float = None):
         """Minimum core width for localization of electron for a given shell width.
 
@@ -624,8 +619,9 @@ class CoreShellParticle:
         )
         return result
 
-
-    def coulomb_screening_energy(self, relative_tolerance: float = 1e-5, plot_integrand: bool = False):
+    def coulomb_screening_energy(
+        self, relative_tolerance: float = 1e-5, plot_integrand: bool = False
+    ):
         """ Calculates the Coulomb screening energy. Somewhat slow.
 
         Parameters
@@ -674,6 +670,7 @@ class CoreShellParticle:
                 self.core_width,
                 0,
                 self.core_width,
+                epsabs=0.0,
                 epsrel=relative_tolerance,
             )
         )
@@ -686,6 +683,7 @@ class CoreShellParticle:
                 self.radius,
                 0,
                 self.core_width,
+                epsabs=0.0,
                 epsrel=relative_tolerance,
             )
         )
@@ -698,6 +696,7 @@ class CoreShellParticle:
                 self.radius,
                 self.core_width + piecewise_discontinuity_exclusion,
                 self.radius,
+                epsabs=0.0,
                 epsrel=relative_tolerance,
             )
         )
@@ -710,6 +709,7 @@ class CoreShellParticle:
                 self.core_width,
                 self.core_width + piecewise_discontinuity_exclusion,
                 self.radius,
+                epsabs=0.0,
                 epsrel=relative_tolerance,
             )
         )
@@ -740,17 +740,29 @@ class CoreShellParticle:
         #     * norm_h
         # )
         if plot_integrand:
-            r, dr = np.linspace(1e-13, self.radius, 128, retstep = True)
+            r, dr = np.linspace(1e-13, self.radius, 128, retstep=True)
             r1, r2 = np.meshgrid(r, r)
             coulomb_integrand = np.vectorize(coulomb_integrand)
             zz = coulomb_integrand(r1, r2)
             plt.imshow(zz, extent=[0, self.radius, self.radius, 0])
-            plt.hlines(self.core_width, xmin=0, xmax=self.radius, linestyles='dotted', label='H-shell')
-            plt.vlines(self.core_width, ymin=0, ymax=self.radius, linestyles='dotted', label='V-core')
+            plt.hlines(
+                self.core_width,
+                xmin=0,
+                xmax=self.radius,
+                linestyles="dotted",
+                label="H-shell",
+            )
+            plt.vlines(
+                self.core_width,
+                ymin=0,
+                ymax=self.radius,
+                linestyles="dotted",
+                label="V-core",
+            )
             plt.colorbar()
-            plt.xlabel('Electron($r_a$) coordinate')
-            plt.ylabel('Hole($r_b$) coordinate')
-            plt.title('Coulomb integrand')
+            plt.xlabel("Electron($r_a$) coordinate")
+            plt.ylabel("Hole($r_b$) coordinate")
+            plt.title("Coulomb integrand")
             plt.show()
         #
         #
@@ -759,8 +771,9 @@ class CoreShellParticle:
         # print(whole_integral[0], sectioned_integral[0], trapzed)
         return sectioned_integral
 
-
-    def interface_polarization_energy(self, relative_tolerance: float = 1e-5, plot_integrand: bool = False):
+    def interface_polarization_energy(
+        self, relative_tolerance: float = 1e-5, plot_integrand: bool = False
+    ):
         """
 
         Parameters
@@ -808,6 +821,7 @@ class CoreShellParticle:
                 self.core_width,
                 0,
                 self.core_width,
+                epsabs=0.0,
                 epsrel=relative_tolerance,
             )
         )
@@ -820,6 +834,7 @@ class CoreShellParticle:
                 self.radius,
                 0,
                 self.core_width,
+                epsabs=0.0,
                 epsrel=relative_tolerance,
             )
         )
@@ -832,6 +847,7 @@ class CoreShellParticle:
                 self.radius,
                 self.core_width + piecewise_discontinuity_exclusion,
                 self.radius,
+                epsabs=0.0,
                 epsrel=relative_tolerance,
             )
         )
@@ -844,6 +860,7 @@ class CoreShellParticle:
                 self.core_width,
                 self.core_width + piecewise_discontinuity_exclusion,
                 self.radius,
+                epsabs=0.0,
                 epsrel=relative_tolerance,
             )
         )
@@ -875,27 +892,39 @@ class CoreShellParticle:
         #     * norm_h
         # )
         if plot_integrand:
-            r, dr = np.linspace(1e-13, self.radius, 128, retstep = True)
+            r, dr = np.linspace(1e-13, self.radius, 128, retstep=True)
             r1, r2 = np.meshgrid(r, r)
             polarization_integrand = np.vectorize(polarization_integrand)
             zz = polarization_integrand(r1, r2)
             plt.imshow(zz, extent=[0, self.radius, self.radius, 0])
-            plt.hlines(self.core_width, xmin=0, xmax=self.radius, linestyles='dotted', label='H-shell')
-            plt.vlines(self.core_width, ymin=0, ymax=self.radius, linestyles='dotted', label='V-core')
+            plt.hlines(
+                self.core_width,
+                xmin=0,
+                xmax=self.radius,
+                linestyles="dotted",
+                label="H-shell",
+            )
+            plt.vlines(
+                self.core_width,
+                ymin=0,
+                ymax=self.radius,
+                linestyles="dotted",
+                label="V-core",
+            )
             plt.colorbar()
-            plt.xlabel('Electron($r_a$) coordinate')
-            plt.ylabel('Hole($r_b$) coordinate')
-            plt.title('Polarization integrand')
+            plt.xlabel("Electron($r_a$) coordinate")
+            plt.ylabel("Hole($r_b$) coordinate")
+            plt.title("Polarization integrand")
             plt.show()
-
-
 
         # trapzed = romb(romb(zz)) * dr * dr * norm_e * norm_h
         return sectioned_integral
 
+
     # This is likely to get refactored later to return types.
     def _is_type_one(self):
         return (self.cmat.vbe > self.smat.vbe) and (self.cmat.cbe < self.smat.cbe)
+
 
     def _is_type_two(self):
         """"A type two QD has both conduction and valence band edges of its core either higher or lower than the
@@ -908,6 +937,7 @@ class CoreShellParticle:
         )
         return core_higher or shell_higher, core_higher, shell_higher
 
+
     def _normalization(self):
 
         if self.norm_valid:
@@ -916,24 +946,20 @@ class CoreShellParticle:
         else:
             k_e, q_e, k_h, q_h = self.calculate_wavenumbers() * n_
             # print(k_h)
-            electron_density_integral = (
-                quad(
-                    lambda x: x
-                    * x
-                    * _densityfunction(x, k_e, q_e, self.core_width, self.shell_width),
-                    0,
-                    self.radius,
-                )[0]
-            )
-            hole_density_integral = (
-                quad(
-                    lambda x: x
-                    * x
-                    * _densityfunction(x, k_h, q_h, self.core_width, self.shell_width),
-                    0,
-                    self.radius,
-                )[0]
-            )
+            electron_density_integral = quad(
+                lambda x: x
+                * x
+                * _densityfunction(x, k_e, q_e, self.core_width, self.shell_width),
+                0,
+                self.radius,
+            )[0]
+            hole_density_integral = quad(
+                lambda x: x
+                * x
+                * _densityfunction(x, k_h, q_h, self.core_width, self.shell_width),
+                0,
+                self.radius,
+            )[0]
 
             self.norm_e = 1 / electron_density_integral
             self.norm_h = 1 / hole_density_integral

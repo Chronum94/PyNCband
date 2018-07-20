@@ -81,8 +81,8 @@ def test_thicker_shell_requires_smaller_core_for_localization_he():
 def test_thicker_core_requires_smaller_shell_for_localization_eh():
     a = Material(1.0, 0.0, 1.0, 1.0, 1.0)
     b = Material(1.0, -0.5, 1.0, 1.0, 1.0)  # Lower band edges.
-    csnc1 = CoreShellParticle(b, a, 1.0, 1.0)  # Type 2 CSNC.
-    csnc2 = CoreShellParticle(b, a, 1.1, 1.0)  # Type 2 CSNC.
+    csnc1 = CoreShellParticle(b, a, 1.0, 1.0)  # Type 2 CSNC. e/h structure.
+    csnc2 = CoreShellParticle(b, a, 1.1, 1.0)  # Type 2 CSNC. e/h structure.
     csnc1_shellloc = csnc1.localization_hole_shell()
     csnc2_shellloc = csnc2.localization_hole_shell()
     assert csnc2_shellloc < csnc1_shellloc
@@ -91,8 +91,8 @@ def test_thicker_core_requires_smaller_shell_for_localization_eh():
 def test_thicker_core_requires_smaller_shell_for_localization_he():
     a = Material(1.0, 0.0, 1.0, 1.0, 1.0)
     b = Material(1.0, -0.5, 1.0, 1.0, 1.0)  # Lower band edges.
-    csnc1 = CoreShellParticle(a, b, 1.0, 1.0)  # Type 2 CSNC.
-    csnc2 = CoreShellParticle(a, b, 1.1, 1.0)  # Type 2 CSNC.
+    csnc1 = CoreShellParticle(a, b, 1.0, 1.0)  # Type 2 CSNC. h/e structure.
+    csnc2 = CoreShellParticle(a, b, 1.1, 1.0)  # Type 2 CSNC. h/e structure.
     csnc1_shellloc = csnc1.localization_electron_shell()
     csnc2_shellloc = csnc2.localization_electron_shell()
     assert csnc2_shellloc < csnc1_shellloc
