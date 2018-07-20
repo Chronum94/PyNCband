@@ -7,7 +7,7 @@ Nano Letters, 12(11), 5545–5551. https://doi.org/10.1021/nl302453x
 
 import numpy as np
 
-from pyncband import *
+from pyncband import Material, CoreShellParticle
 
 
 # @profile
@@ -23,15 +23,16 @@ def main():
     print(
         "Using InP electron effective mass: {:0.2f}".format(inp_effective_electron_mass)
     )
-    print("Core \t Shell \tExp \t Int2(∆):")
+    print("Core \t Shell \tExp \t BG \t E(e): E(h): Coulomb: Polarization: Model(∆):")
     for i, shell_width in enumerate(shell_widths):
         csnc = CoreShellParticle(InP, CdS, 1.23, shell_width, 1.5)
         print(1.23, "\t", shell_width, end="\t")
         # print("Is CSNC type two? h/e?", csnc.type_two, csnc.h_e)
         energies = np.array(csnc.calculate_s1_energies())
         # print(energies)
-        col_energy_sectioned = csnc.coulomb_screening_energy(plot_integrand=True)
-        pol_energy_sectioned = csnc.interface_polarization_energy(plot_integrand=True)
+        plots = False
+        col_energy_sectioned = csnc.coulomb_screening_energy(plot_integrand=plots)
+        pol_energy_sectioned = csnc.interface_polarization_energy(plot_integrand=plots)
         # whole_integral_energy = (
         #     csnc.bandgap + np.sum(energies) + col_energy_whole[0] + pol_energy_whole[0]
         # )
@@ -52,7 +53,12 @@ def main():
         #     end="\t",
         # )
         print(
-            "{:0.2f} ({:0.2f})".format(
+            "{:0.2f}\t{:0.2f}\t{:0.2f}\t{:0.2f}\t{:0.2f}\t{:0.2f}({:0.2f})".format(
+                csnc.bandgap,
+                energies[0],
+                energies[1],
+                col_energy_sectioned[0],
+                pol_energy_sectioned[0],
                 sectioned_integral_energy,
                 abs(experimental_bandgaps[i] - sectioned_integral_energy),
             ),

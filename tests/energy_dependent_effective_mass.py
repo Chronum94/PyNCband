@@ -1,6 +1,6 @@
 import numpy as np
 
-from pyncband import *
+from pyncband import Material, CoreShellParticle
 
 
 InP = Material(1.34, 0, 1.0, 0.64, 9.6, "InP")

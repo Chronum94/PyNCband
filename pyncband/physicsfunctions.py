@@ -2,12 +2,12 @@ from cmath import tan
 
 import numpy as np
 from numpy.lib.scimath import sqrt as csqrt
-from numba import jit, float32, float64, complex128
+from numba import jit, float64, complex128
 
 from scipy.constants import hbar, e, m_e, epsilon_0 as eps0
 
 from .scaling import n_
-from .utils import *
+from .utils import EnergyNotBracketedError
 from typing import Callable, Union, TYPE_CHECKING, Tuple
 
 if TYPE_CHECKING:
@@ -109,6 +109,12 @@ def _unnormalized_core_wavefunction(
     val : float, complex
         The value of the wavefunction at the point x.
 
+    References
+    ----------
+    .. [1] Piryatinski, A., Ivanov, S. A., Tretiak, S., & Klimov, V. I. (2007). Effect of Quantum and Dielectric \
+    Confinement on the Exciton−Exciton Interaction Energy in Type II Core/Shell Semiconductor Nanocrystals. \
+    Nano Letters, 7(1), 108–115. https://doi.org/10.1021/nl0622404
+
     """
     ksq = k ** 2  # Useful for the higher powers.
     xsq = x ** 2
@@ -117,6 +123,8 @@ def _unnormalized_core_wavefunction(
     # The branch is for numerical stability near x = 0.
     if abs(x) < 1e-8:
         # There is no speed penalty for **, so don't try the x * x approach.
+        # if abs(denom) < 1e-2:
+        #     raise RuntimeWarning
         val = 1 / denom * (k - k * ksq * xsq / 6 + k * ksq ** 2 * xsq ** 2 / 120)
     else:
         val = np.sin(k * x) / (x * denom)
@@ -151,6 +159,12 @@ def _unnormalized_shell_wavefunction(
     Returns
     -------
     float, purely real or purely imaginary : The value of the wavefunction at the point x.
+
+    References
+    ----------
+    .. [1] Piryatinski, A., Ivanov, S. A., Tretiak, S., & Klimov, V. I. (2007). Effect of Quantum and Dielectric \
+    Confinement on the Exciton−Exciton Interaction Energy in Type II Core/Shell Semiconductor Nanocrystals. \
+    Nano Letters, 7(1), 108–115. https://doi.org/10.1021/nl0622404
 
     """
     # This doesn't need the numerical stability shenanigans because we aren't evaluating it at x = 0.
@@ -303,11 +317,11 @@ def electron_eigenvalue_residual(
     References
     ----------
 
-    .. [1] Piryatinski, A., Ivanov, S. A., Tretiak, S., & Klimov, V. I. (2007). Effect of Quantum and Dielectric
-        Confinement on the Exciton−Exciton Interaction Energy in Type II Core/Shell Semiconductor Nanocrystals.
+    .. [1] Piryatinski, A., Ivanov, S. A., Tretiak, S., & Klimov, V. I. (2007). Effect of Quantum and Dielectric \
+        Confinement on the Exciton−Exciton Interaction Energy in Type II Core/Shell Semiconductor Nanocrystals. \
         Nano Letters, 7(1), 108–115. https://doi.org/10.1021/nl0622404
 
-    .. [2] Li, L., Reiss, P., & Protie, M. (2009). Core / Shell Semiconductor Nanocrystals, (2), 154–168.
+    .. [2] Li, L., Reiss, P., & Protie, M. (2009). Core / Shell Semiconductor Nanocrystals, (2), 154–168. \
         https://doi.org/10.1002/smll.200800841
 
     """

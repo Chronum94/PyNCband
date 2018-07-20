@@ -10,8 +10,6 @@ import numpy as np
 from scipy.constants import hbar, e, m_e
 from scipy.integrate import quad, dblquad, romb
 from scipy.optimize import brentq
-from quadpy import quadrilateral as quadri
-
 
 from .Material import Material
 from .physicsfunctions import *
@@ -231,14 +229,21 @@ class CoreShellParticle:
             energy_scale = e
         return self.s1_e / energy_scale, self.s1_h / energy_scale
 
-    def plot_electron_wavefunction(
-        self, x, core_wavenumber: float, shell_wavenumber: float
-    ):
-
+    def plot_electron_wavefunction(self):
+        core_wavenumber, shell_wavenumber, _, _ = self.calculate_wavenumbers() * n_
+        x = np.linspace(0, self.radius, 1000)
         y = wavefunction(
             x, core_wavenumber, shell_wavenumber, self.core_width, self.shell_width
         )
-        return y
+        return y / np.max(y)
+
+    def plot_hole_wavefunction(self):
+        _, _, core_wavenumber, shell_wavenumber = self.calculate_wavenumbers() * n_
+        x = np.linspace(0, self.radius, 1000)
+        y = wavefunction(
+            x, core_wavenumber, shell_wavenumber, self.core_width, self.shell_width
+        )
+        return y / np.max(y)
 
     def plot_potential_profile(self):
         """Plots one half of the spherically symmetric potential well of the quantum dot."""
@@ -274,8 +279,8 @@ class CoreShellParticle:
         norm_e, norm_h = self._normalization()
 
         R, H = self.core_width, self.shell_width
-        core_denom = K_e * K_h * 2 * (k_h * k_h - k_e * k_e)
-        shell_denom = Q_e * Q_h * 2 * (q_h * q_h - q_e * q_e)
+        core_denom = K_e * K_h * 2 * (k_h ** 2 - k_e ** 2)
+        shell_denom = Q_e * Q_h * 2 * (q_h ** 2 - q_e ** 2)
         # The accompanying formula for these are in a Maxima file.
         # QDWavefunctionsAndIntegrals.wxmx
         core_integral = (
@@ -283,8 +288,6 @@ class CoreShellParticle:
                 (k_h - k_e) * np.sin(R * (k_h + k_e))
                 - (k_h + k_e) * np.sin(R * (k_h - k_e))
             )
-            * norm_e
-            * norm_h
             / core_denom
         )
         shell_integral = (
@@ -292,12 +295,13 @@ class CoreShellParticle:
                 (q_h - q_e) * np.sin(H * (q_h + q_e))
                 - (q_h + q_e) * np.sin(H * (q_h - q_e))
             )
-            * norm_e
-            * norm_h
             / shell_denom
         )
-
-        return abs(core_integral + shell_integral) ** 2
+        # if abs(core_denom) < 1e-2 or abs(shell_denom) < 1e-2:
+        #     print(core_denom, shell_denom)
+        #     print(R, H)
+        #     raise RuntimeWarning("TINY DENOM.")
+        return abs(core_integral + shell_integral) ** 2 * norm_h * norm_e
 
     def numerical_overlap_integral(self):
         """Calculates the numerical electron-hole overlap integral.
@@ -319,10 +323,10 @@ class CoreShellParticle:
         norm_e, norm_h = self._normalization()
 
         def ewf(x):
-            return wavefunction(x, k_e, q_e, self.core_width, self.shell_width)
+            return _wavefunction(x, k_e, q_e, self.core_width, self.shell_width)
 
         def hwf(x):
-            return wavefunction(x, k_h, q_h, self.core_width, self.shell_width)
+            return _wavefunction(x, k_h, q_h, self.core_width, self.shell_width)
 
         def overlap_integrand_real(x):
             return np.real(x * x * ewf(x) * hwf(x))
@@ -333,14 +337,12 @@ class CoreShellParticle:
         overlap_integral_real = quad(overlap_integrand_real, 0, self.radius)
         overlap_integral_imag = quad(overlap_integrand_imag, 0, self.radius)
         # Return both the answer and order-of-magnitude of error.
+        # print(norm_e, norm_h)
         return (
-            abs(
-                (overlap_integral_real[0] + 1j * overlap_integral_imag[0])
-                * norm_e
-                * norm_h
-            )
-            ** 2,
-            (overlap_integral_imag[1] + overlap_integral_real[1]) ** 2,
+            abs((overlap_integral_real[0] + 1j * overlap_integral_imag[0])) ** 2
+            * norm_e
+            * norm_h  # ,
+            # (overlap_integral_imag[1] + overlap_integral_real[1]) ** 2,
         )
 
     def print_e_wf_at_zero(self):
@@ -920,11 +922,9 @@ class CoreShellParticle:
         # trapzed = romb(romb(zz)) * dr * dr * norm_e * norm_h
         return sectioned_integral
 
-
     # This is likely to get refactored later to return types.
     def _is_type_one(self):
         return (self.cmat.vbe > self.smat.vbe) and (self.cmat.cbe < self.smat.cbe)
-
 
     def _is_type_two(self):
         """"A type two QD has both conduction and valence band edges of its core either higher or lower than the
@@ -936,7 +936,6 @@ class CoreShellParticle:
             self.cmat.cbe < self.smat.cbe
         )
         return core_higher or shell_higher, core_higher, shell_higher
-
 
     def _normalization(self):
 

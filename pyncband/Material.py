@@ -21,24 +21,25 @@ class Material:
         Parameters
         ----------
 
-        bandgap : float
+        bandgap : float, eV
             A real, positive value for the band gap of the semiconductor material.
 
-        conduction_band_edge : float
+        conduction_band_edge : float, eV
             A real, negative value for the conduction band edge with reference to the vacuum level of the material.
 
-        electron_eff_mass : float
+        electron_eff_mass : float, electron-mass
             The isotropic effective mass of the electron in the conduction band.
 
-        hole_eff_mass : float
+        hole_eff_mass : float, electron-mass
             The isotropic effective mass of the hole in the valence band.
 
-        epsilon : float
-            The real dielectric constant of the material. Dielectric constants are usually complex, so not sure what's
-            happening here.
+        epsilon : float, free-space-permittivity
+            The real dielectric constant of the material, in terms of the permittivity of free space.
 
         name : str
-            The name of the material."""
+            The name of the material.
+
+        """
 
         self.bandgap: float = bandgap
 

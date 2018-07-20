@@ -1,4 +1,4 @@
-from pyncband import *
+from pyncband import Material, CoreShellParticle
 import numpy as np
 from numpy import testing as test
 

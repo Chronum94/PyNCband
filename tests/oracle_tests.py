@@ -1,12 +1,5 @@
-import numpy.testing as test
-import numpy as np
-import matplotlib.pyplot as plt
-
-from scipy.constants import hbar, m_e, e
-
 from pyncband.Material import Material
 from pyncband.CoreShellParticle import CoreShellParticle
-from pyncband.scaling import n_
 
 # These tests have known answers.
 
