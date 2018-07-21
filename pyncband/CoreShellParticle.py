@@ -607,7 +607,7 @@ class CoreShellParticle:
 
     def coulomb_screening_energy(
         self, relative_tolerance: float = 1e-5, plot_integrand: bool = False
-    ) -> np.ndarray([float, float]):
+    ):
         """ Calculates the Coulomb screening energy. Somewhat slow.
 
         Parameters
@@ -722,7 +722,7 @@ class CoreShellParticle:
 
     def interface_polarization_energy(
         self, relative_tolerance: float = 1e-5, plot_integrand: bool = False
-    ) -> np.ndarray([float, float]):
+    ):
         """
 
         Parameters
