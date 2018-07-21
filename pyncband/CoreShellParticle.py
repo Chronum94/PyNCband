@@ -20,9 +20,10 @@ __all__ = ["CoreShellParticle"]
 
 
 class CoreShellParticle:
-    BASE_SCAN_RESOLUTION = 1000
-    MAX_ENERGY_BRACKETING_ATTEMPTS = 5
-    DEFAULT_ENERGY_SEARCH_RANGE_EV = 5
+    BASE_SCAN_RESOLUTION = 2000
+    MAX_ENERGY_BRACKETING_ATTEMPTS = 50
+    DEFAULT_ELECTRON_ENERGY_SEARCH_RANGE_EV = 1
+    DEFAULT_HOLE_ENERGY_SEARCH_RANGE_EV = 1
     def __init__(
         self,
         core_material: Material = None,
@@ -204,14 +205,14 @@ class CoreShellParticle:
 
         if resolution is None:
             resolution = int(self.BASE_SCAN_RESOLUTION * self.scan_refinement_multiplier)
-            print(resolution)
+            # print(resolution)
 
         # Bounds in Joules.
         # TODO: Find a better way to bracket energies.
         lower_bound_e = 0
-        upper_bound_e = self.DEFAULT_ENERGY_SEARCH_RANGE_EV * e
+        upper_bound_e = self.DEFAULT_ELECTRON_ENERGY_SEARCH_RANGE_EV * e
         lower_bound_h = 0
-        upper_bound_h = self.DEFAULT_ENERGY_SEARCH_RANGE_EV * e
+        upper_bound_h = self.DEFAULT_HOLE_ENERGY_SEARCH_RANGE_EV * e
 
         # Energy brackets.
         electron_bracket_found, hole_bracket_found = False, False
@@ -225,15 +226,15 @@ class CoreShellParticle:
 
         while not electron_bracket_found and current_electron_bracketing_attempt <= self.MAX_ENERGY_BRACKETING_ATTEMPTS:
             bracket_low, bracket_high, electron_bracket_found = scan_and_bracket(eer, lower_bound_e, upper_bound_e, resolution)
-            lower_bound_e += self.DEFAULT_ENERGY_SEARCH_RANGE_EV * e
-            upper_bound_e += self.DEFAULT_ENERGY_SEARCH_RANGE_EV * e
+            lower_bound_e += self.DEFAULT_ELECTRON_ENERGY_SEARCH_RANGE_EV * e
+            upper_bound_e += self.DEFAULT_ELECTRON_ENERGY_SEARCH_RANGE_EV * e
             current_electron_bracketing_attempt += 1
 
         if not electron_bracket_found:
             raise EnergyNotBracketedError(f"Energy was not bracketed after {self.MAX_ENERGY_BRACKETING_ATTEMPTS} scans "
-                                          f"increasing by {self.DEFAULT_ENERGY_SEARCH_RANGE_EV} eV each. Consider "
+                                          f"increasing by {self.DEFAULT_ELECTRON_ENERGY_SEARCH_RANGE_EV} eV each. Consider "
                                           "increaseing MAX_ENERGY_BRACKETING_ATTEMPTS or "
-                                          "_DEFAULT_ENERGY_SEARCH_RANGE_EV, or both.")
+                                          "DEFAULT_ELECTRON_ENERGY_SEARCH_RANGE_EV, or both.")
         print(current_electron_bracketing_attempt)
 
 
@@ -248,15 +249,15 @@ class CoreShellParticle:
             return hole_eigenvalue_residual(x, self)
         while not hole_bracket_found and current_hole_bracketing_attempt <= self.MAX_ENERGY_BRACKETING_ATTEMPTS:
             bracket_low, bracket_high, hole_bracket_found = scan_and_bracket(her, lower_bound_h, upper_bound_h, resolution)
-            lower_bound_h += self.DEFAULT_ENERGY_SEARCH_RANGE_EV * e
-            upper_bound_h += self.DEFAULT_ENERGY_SEARCH_RANGE_EV * e
+            lower_bound_h += self.DEFAULT_HOLE_ENERGY_SEARCH_RANGE_EV * e
+            upper_bound_h += self.DEFAULT_HOLE_ENERGY_SEARCH_RANGE_EV * e
             current_hole_bracketing_attempt += 1
 
         if not hole_bracket_found:
             raise EnergyNotBracketedError(f"Energy was not bracketed after {self.MAX_ENERGY_BRACKETING_ATTEMPTS} scans "
-                                          f"increasing by {self.DEFAULT_ENERGY_SEARCH_RANGE_EV} eV each. Consider "
+                                          f"increasing by {self.DEFAULT_HOLE_ENERGY_SEARCH_RANGE_EV} eV each. Consider "
                                           "increaseing MAX_ENERGY_BRACKETING_ATTEMPTS or "
-                                          "_DEFAULT_ENERGY_SEARCH_RANGE_EV, or both.")
+                                          "DEFAULT_HOLE_ENERGY_SEARCH_RANGE_EV, or both.")
         print(current_hole_bracketing_attempt)
 
         self.s1_h = brentq(hole_eigenvalue_residual, bracket_low, bracket_high, args=(self,))
@@ -268,6 +269,7 @@ class CoreShellParticle:
             energy_scale = e
         return self.s1_e / energy_scale, self.s1_h / energy_scale
 
+
     def plot_electron_wavefunction(self):
         core_wavenumber, shell_wavenumber, _, _ = self.calculate_wavenumbers() * n_
         x = np.linspace(0, self.radius, 1000)
@@ -275,6 +277,7 @@ class CoreShellParticle:
             x, core_wavenumber, shell_wavenumber, self.core_width, self.shell_width
         )
         return y / np.max(y)
+
 
     def plot_hole_wavefunction(self):
         _, _, core_wavenumber, shell_wavenumber = self.calculate_wavenumbers() * n_
