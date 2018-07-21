@@ -14,7 +14,7 @@ from scipy.optimize import brentq
 from .Material import Material
 from .physicsfunctions import *
 from .scaling import n_
-from .utils import *
+from .utils import EnergyNotBracketedError, LocalizationNotPossibleError
 
 __all__ = ["CoreShellParticle"]
 
@@ -24,6 +24,7 @@ class CoreShellParticle:
     MAX_ENERGY_BRACKETING_ATTEMPTS = 50
     DEFAULT_ELECTRON_ENERGY_SEARCH_RANGE_EV = 1
     DEFAULT_HOLE_ENERGY_SEARCH_RANGE_EV = 1
+
     def __init__(
         self,
         core_material: Material = None,
@@ -74,9 +75,7 @@ class CoreShellParticle:
         self.ue = np.abs(self.cmat.cbe - self.smat.cbe) * e  # Converting to Joules.
         self.uh = np.abs(self.cmat.vbe - self.smat.vbe) * e
 
-        self.bandgap = min(self.cmat.cbe, self.smat.cbe) - max(
-            self.cmat.vbe, self.smat.vbe
-        )
+        self.bandgap = min(self.cmat.cbe, self.smat.cbe) - max(self.cmat.vbe, self.smat.vbe)
 
         self.environment_epsilon = environment_epsilon
 
@@ -84,7 +83,7 @@ class CoreShellParticle:
         # For coreshells with massive disparities, the energy scan_and_bracket needs 'adaptive' refinement.
         self.scan_refinement_multiplier = max(core_width, shell_width) / min(core_width, shell_width)
 
-    def set_core_width(self, x):
+    def set_core_width(self, x: float):
         """
 
         Parameters
@@ -101,7 +100,7 @@ class CoreShellParticle:
         self.energies_valid = False
         self.norm_valid = False
 
-    def set_shell_width(self, x):
+    def set_shell_width(self, x: float):
         """
 
         Parameters
@@ -144,13 +143,9 @@ class CoreShellParticle:
         if self.type_one:
             return np.array(
                 [
-                    wavenumber_from_energy(
-                        energy_e, self.cmat.m_e, potential_offset=self.ue
-                    ),
+                    wavenumber_from_energy(energy_e, self.cmat.m_e, potential_offset=self.ue),
                     wavenumber_from_energy(energy_e, self.smat.m_e),
-                    wavenumber_from_energy(
-                        energy_h, self.cmat.m_h, potential_offset=self.uh
-                    ),
+                    wavenumber_from_energy(energy_h, self.cmat.m_h, potential_offset=self.uh),
                     wavenumber_from_energy(energy_h, self.smat.m_h),
                 ]
             )
@@ -159,32 +154,24 @@ class CoreShellParticle:
                 return np.array(
                     [
                         wavenumber_from_energy(energy_e, self.cmat.m_e),
-                        wavenumber_from_energy(
-                            energy_e, self.smat.m_e, potential_offset=self.ue
-                        ),
-                        wavenumber_from_energy(
-                            energy_h, self.cmat.m_h, potential_offset=self.uh
-                        ),
+                        wavenumber_from_energy(energy_e, self.smat.m_e, potential_offset=self.ue),
+                        wavenumber_from_energy(energy_h, self.cmat.m_h, potential_offset=self.uh),
                         wavenumber_from_energy(energy_h, self.smat.m_h),
                     ]
                 )
             elif self.h_e:
                 return np.array(
                     [
-                        wavenumber_from_energy(
-                            energy_e, self.cmat.m_e, potential_offset=self.ue
-                        ),
+                        wavenumber_from_energy(energy_e, self.cmat.m_e, potential_offset=self.ue),
                         wavenumber_from_energy(energy_e, self.smat.m_e),
                         wavenumber_from_energy(energy_h, self.cmat.m_h),
-                        wavenumber_from_energy(
-                            energy_h, self.smat.m_h, potential_offset=self.uh
-                        ),
+                        wavenumber_from_energy(energy_h, self.smat.m_h, potential_offset=self.uh),
                     ]
                 )
 
     # This method can currently only find cases where the energy of the lowest state is above the potential step.
     def calculate_s1_energies(
-        self, bounds=(), resolution=None, in_ev=True
+        self, bounds: Tuple[float, float] = (), resolution: int = None, in_ev: bool = True
     ) -> Tuple[float, float]:
         """Calculates eigenenergies of the S1 exciton state in eV.
 
@@ -225,19 +212,21 @@ class CoreShellParticle:
             return electron_eigenvalue_residual(x, self)
 
         while not electron_bracket_found and current_electron_bracketing_attempt <= self.MAX_ENERGY_BRACKETING_ATTEMPTS:
-            bracket_low, bracket_high, electron_bracket_found = scan_and_bracket(eer, lower_bound_e, upper_bound_e, resolution)
+            bracket_low, bracket_high, electron_bracket_found = scan_and_bracket(
+                eer, lower_bound_e, upper_bound_e, resolution
+            )
             lower_bound_e += self.DEFAULT_ELECTRON_ENERGY_SEARCH_RANGE_EV * e
             upper_bound_e += self.DEFAULT_ELECTRON_ENERGY_SEARCH_RANGE_EV * e
             current_electron_bracketing_attempt += 1
 
         if not electron_bracket_found:
-            raise EnergyNotBracketedError(f"Energy was not bracketed after {self.MAX_ENERGY_BRACKETING_ATTEMPTS} scans "
-                                          f"increasing by {self.DEFAULT_ELECTRON_ENERGY_SEARCH_RANGE_EV} eV each. Consider "
-                                          "increaseing MAX_ENERGY_BRACKETING_ATTEMPTS or "
-                                          "DEFAULT_ELECTRON_ENERGY_SEARCH_RANGE_EV, or both.")
+            raise EnergyNotBracketedError(
+                f"Energy was not bracketed after {self.MAX_ENERGY_BRACKETING_ATTEMPTS} scans "
+                f"increasing by {self.DEFAULT_ELECTRON_ENERGY_SEARCH_RANGE_EV} eV each. Consider "
+                "increaseing MAX_ENERGY_BRACKETING_ATTEMPTS or "
+                "DEFAULT_ELECTRON_ENERGY_SEARCH_RANGE_EV, or both."
+            )
         print(current_electron_bracketing_attempt)
-
-
 
         self.s1_e = brentq(electron_eigenvalue_residual, bracket_low, bracket_high, args=(self,))
 
@@ -247,17 +236,22 @@ class CoreShellParticle:
         # Hole eigenvalue residual.
         def her(x):
             return hole_eigenvalue_residual(x, self)
+
         while not hole_bracket_found and current_hole_bracketing_attempt <= self.MAX_ENERGY_BRACKETING_ATTEMPTS:
-            bracket_low, bracket_high, hole_bracket_found = scan_and_bracket(her, lower_bound_h, upper_bound_h, resolution)
+            bracket_low, bracket_high, hole_bracket_found = scan_and_bracket(
+                her, lower_bound_h, upper_bound_h, resolution
+            )
             lower_bound_h += self.DEFAULT_HOLE_ENERGY_SEARCH_RANGE_EV * e
             upper_bound_h += self.DEFAULT_HOLE_ENERGY_SEARCH_RANGE_EV * e
             current_hole_bracketing_attempt += 1
 
         if not hole_bracket_found:
-            raise EnergyNotBracketedError(f"Energy was not bracketed after {self.MAX_ENERGY_BRACKETING_ATTEMPTS} scans "
-                                          f"increasing by {self.DEFAULT_HOLE_ENERGY_SEARCH_RANGE_EV} eV each. Consider "
-                                          "increaseing MAX_ENERGY_BRACKETING_ATTEMPTS or "
-                                          "DEFAULT_HOLE_ENERGY_SEARCH_RANGE_EV, or both.")
+            raise EnergyNotBracketedError(
+                f"Energy was not bracketed after {self.MAX_ENERGY_BRACKETING_ATTEMPTS} scans "
+                f"increasing by {self.DEFAULT_HOLE_ENERGY_SEARCH_RANGE_EV} eV each. Consider "
+                "increaseing MAX_ENERGY_BRACKETING_ATTEMPTS or "
+                "DEFAULT_HOLE_ENERGY_SEARCH_RANGE_EV, or both."
+            )
         print(current_hole_bracketing_attempt)
 
         self.s1_h = brentq(hole_eigenvalue_residual, bracket_low, bracket_high, args=(self,))
@@ -269,32 +263,22 @@ class CoreShellParticle:
             energy_scale = e
         return self.s1_e / energy_scale, self.s1_h / energy_scale
 
-
     def plot_electron_wavefunction(self):
         core_wavenumber, shell_wavenumber, _, _ = self.calculate_wavenumbers() * n_
         x = np.linspace(0, self.radius, 1000)
-        y = wavefunction(
-            x, core_wavenumber, shell_wavenumber, self.core_width, self.shell_width
-        )
+        y = wavefunction(x, core_wavenumber, shell_wavenumber, self.core_width, self.shell_width)
         return y / np.max(y)
-
 
     def plot_hole_wavefunction(self):
         _, _, core_wavenumber, shell_wavenumber = self.calculate_wavenumbers() * n_
         x = np.linspace(0, self.radius, 1000)
-        y = wavefunction(
-            x, core_wavenumber, shell_wavenumber, self.core_width, self.shell_width
-        )
+        y = wavefunction(x, core_wavenumber, shell_wavenumber, self.core_width, self.shell_width)
         return y / np.max(y)
 
     def plot_potential_profile(self):
         """Plots one half of the spherically symmetric potential well of the quantum dot."""
         plt.hlines([self.cmat.vbe, self.cmat.cbe], xmin=0, xmax=self.core_width)
-        plt.hlines(
-            [self.smat.vbe, self.smat.cbe],
-            xmin=self.core_width,
-            xmax=self.core_width + self.shell_width,
-        )
+        plt.hlines([self.smat.vbe, self.smat.cbe], xmin=self.core_width, xmax=self.core_width + self.shell_width)
         lcbe, hcbe = sorted([self.cmat.cbe, self.smat.cbe])
         lvbe, hvbe = sorted([self.cmat.vbe, self.smat.vbe])
         plt.vlines(self.core_width, ymin=lcbe, ymax=hcbe)
@@ -325,20 +309,8 @@ class CoreShellParticle:
         shell_denom = Q_e * Q_h * 2 * (q_h ** 2 - q_e ** 2)
         # The accompanying formula for these are in a Maxima file.
         # QDWavefunctionsAndIntegrals.wxmx
-        core_integral = (
-            -(
-                (k_h - k_e) * np.sin(R * (k_h + k_e))
-                - (k_h + k_e) * np.sin(R * (k_h - k_e))
-            )
-            / core_denom
-        )
-        shell_integral = (
-            -(
-                (q_h - q_e) * np.sin(H * (q_h + q_e))
-                - (q_h + q_e) * np.sin(H * (q_h - q_e))
-            )
-            / shell_denom
-        )
+        core_integral = -((k_h - k_e) * np.sin(R * (k_h + k_e)) - (k_h + k_e) * np.sin(R * (k_h - k_e))) / core_denom
+        shell_integral = -((q_h - q_e) * np.sin(H * (q_h + q_e)) - (q_h + q_e) * np.sin(H * (q_h - q_e))) / shell_denom
         # if abs(core_denom) < 1e-2 or abs(shell_denom) < 1e-2:
         #     print(core_denom, shell_denom)
         #     print(R, H)
@@ -391,7 +363,7 @@ class CoreShellParticle:
         """Prints the wavefunction at 0."""
         print(_wavefunction(0, self.calculate_wavenumbers()[0], self.core_width))
 
-    def localization_electron_core(self, shell_width: float = None):
+    def localization_electron_core(self, shell_width: float = None) -> float:
         """Minimum core width for localization of electron for a given shell width.
 
         Parameters
@@ -410,9 +382,7 @@ class CoreShellParticle:
             raise NotImplementedError
         elif self.type_two:
             if self.h_e:
-                raise LocalizationNotPossibleError(
-                    "Electrons will not localize in the core in h/e structures."
-                )
+                raise LocalizationNotPossibleError("Electrons will not localize in the core in h/e structures.")
 
             # EVERYTHING IN THIS FUNCTION HAS BEEN SCALED WITH n_ = 1e-9. There are almost certainly better, more adaptive
             # ways to scale. But for now, the nano- is our lord and saviour.
@@ -425,12 +395,7 @@ class CoreShellParticle:
             # This could use a cached value. This does not change.
             # In the Piryatinski 2007 paper, this is used to set a lower bound on the core radius search bracket.
             # However, I've noticed that this lower bracket often fails. Need to look more into why.
-            x1 = brentq(
-                _x_residual_function,
-                -np.pi + 1e-10,
-                0,
-                args=(self.cmat.m_e, self.smat.m_e),
-            )
+            x1 = brentq(_x_residual_function, -np.pi + 1e-10, 0, args=(self.cmat.m_e, self.smat.m_e))
 
             # Same for this.
             # SCALED TO ORDER UNITY.
@@ -453,11 +418,7 @@ class CoreShellParticle:
 
                 # This is the fallback for the case of where the sign doesn't change, and we have to drop the lower
                 # limit to 0.
-                if (
-                    min_core_loc_from_shell(lower_bound)
-                    * min_core_loc_from_shell(upper_bound)
-                    > 0
-                ):  # No sign change.
+                if min_core_loc_from_shell(lower_bound) * min_core_loc_from_shell(upper_bound) > 0:  # No sign change.
                     # plt.plot(min_core_loc_from_shell(np.linspace(lower_bound, upper_bound, 1000)))
                     # plt.show()
                     # warn(
@@ -480,7 +441,7 @@ class CoreShellParticle:
             else:
                 raise ValueError
 
-    def localization_electron_shell(self, core_width: float = None):
+    def localization_electron_shell(self, core_width: float = None) -> float:
         """Minimum shell width for localization of electron for a given core width.
 
         Parameters
@@ -495,9 +456,7 @@ class CoreShellParticle:
 
         """
         if self.e_h:
-            raise LocalizationNotPossibleError(
-                "Electrons will not localize in the shell in e/h structures."
-            )
+            raise LocalizationNotPossibleError("Electrons will not localize in the shell in e/h structures.")
 
         # EVERYTHING IN THIS FUNCTION HAS BEEN SCALED WITH n_ = 1e-9. There are almost certainly better, more adaptive
         # ways to scale. But for now, the nano- is our lord and saviour.
@@ -522,13 +481,10 @@ class CoreShellParticle:
             # print('FLow+:', min_core_loc_from_shell(x1 / k1 + 1e-4))
             # print("FBFHIGH:", min_core_loc_from_shell(upper_bound))
 
-        result = brentq(
-            min_shell_loc_from_core, np.pi / (2 * q1) + 1e-13, np.pi / q1 - 1e-13
-        )
+        result = brentq(min_shell_loc_from_core, np.pi / (2 * q1) + 1e-13, np.pi / q1 - 1e-13)
         return result
 
-
-    def localization_hole_core(self, shell_width: float = None, resolution=1000):
+    def localization_hole_core(self, shell_width: float = None, resolution=1000) -> float:
         """Minimum core width for localization of holes for a given shell width.
 
         Parameters
@@ -547,9 +503,7 @@ class CoreShellParticle:
             raise NotImplementedError
         elif self.type_two:
             if self.e_h:
-                raise LocalizationNotPossibleError(
-                    "Holes will not localize in the core in e/h structures."
-                )
+                raise LocalizationNotPossibleError("Holes will not localize in the core in e/h structures.")
 
             # EVERYTHING IN THIS FUNCTION HAS BEEN SCALED WITH n_ = 1e-9. There are almost certainly better, more adaptive
             # ways to scale. But for now, the nano- is our lord and saviour.
@@ -562,12 +516,7 @@ class CoreShellParticle:
             # This could use a cached value. This does not change.
             # In the Piryatinski 2007 paper, this is used to set a lower bound on the core radius search bracket.
             # However, I've noticed that this lower bracket often fails. Need to look more into why.
-            x1 = brentq(
-                _x_residual_function,
-                -np.pi + 1e-10,
-                0,
-                args=(self.cmat.m_e, self.smat.m_e),
-            )
+            x1 = brentq(_x_residual_function, -np.pi + 1e-10, 0, args=(self.cmat.m_e, self.smat.m_e))
 
             # Same for this.
             # SCALED TO ORDER UNITY.
@@ -590,11 +539,7 @@ class CoreShellParticle:
 
                 # This is the fallback for the case of where the sign doesn't change, and we have to drop the lower
                 # limit to 0.
-                if (
-                    min_core_loc_from_shell(lower_bound)
-                    * min_core_loc_from_shell(upper_bound)
-                    > 0
-                ):  # No sign change.
+                if min_core_loc_from_shell(lower_bound) * min_core_loc_from_shell(upper_bound) > 0:  # No sign change.
                     # plt.plot(min_core_loc_from_shell(np.linspace(lower_bound, upper_bound, 1000)))
                     # plt.show()
                     # warn(
@@ -617,7 +562,7 @@ class CoreShellParticle:
             else:
                 raise ValueError
 
-    def localization_hole_shell(self, core_width: float = None):
+    def localization_hole_shell(self, core_width: float = None) -> float:
         """Minimum core width for localization of electron for a given shell width.
 
         Parameters
@@ -632,9 +577,7 @@ class CoreShellParticle:
 
         """
         if self.h_e:
-            raise LocalizationNotPossibleError(
-                "Holes will not localize in the shell in e/h structures."
-            )
+            raise LocalizationNotPossibleError("Holes will not localize in the shell in e/h structures.")
 
         # EVERYTHING IN THIS FUNCTION HAS BEEN SCALED WITH n_ = 1e-9. There are almost certainly better, more adaptive
         # ways to scale. But for now, the nano- is our lord and saviour.
@@ -659,14 +602,12 @@ class CoreShellParticle:
             # print('FLow+:', min_core_loc_from_shell(x1 / k1 + 1e-4))
             # print("FBFHIGH:", min_core_loc_from_shell(upper_bound))
 
-        result = brentq(
-            min_shell_loc_from_core, np.pi / (2 * q1) + 1e-13, np.pi / q1 - 1e-13
-        )
+        result = brentq(min_shell_loc_from_core, np.pi / (2 * q1) + 1e-13, np.pi / q1 - 1e-13)
         return result
 
     def coulomb_screening_energy(
         self, relative_tolerance: float = 1e-5, plot_integrand: bool = False
-    ):
+    ) -> np.ndarray([float, float]):
         """ Calculates the Coulomb screening energy. Somewhat slow.
 
         Parameters
@@ -687,37 +628,19 @@ class CoreShellParticle:
         norm_e, norm_h = self._normalization()
         # Electron/hole density functions.
         def edf(x):
-            return (
-                abs(_wavefunction(x, k_e, q_e, self.core_width, self.shell_width)) ** 2
-            )
+            return abs(_wavefunction(x, k_e, q_e, self.core_width, self.shell_width)) ** 2
 
         def hdf(x):
-            return (
-                abs(_wavefunction(x, k_h, q_h, self.core_width, self.shell_width)) ** 2
-            )
+            return abs(_wavefunction(x, k_h, q_h, self.core_width, self.shell_width)) ** 2
 
-        coulomb_integrand = (
-            lambda r1, r2: r1 ** 2
-            * r2 ** 2
-            * edf(r1)
-            * hdf(r2)
-            * coulomb_screening_operator(r1, r2)
-        )
+        coulomb_integrand = lambda r1, r2: r1 ** 2 * r2 ** 2 * edf(r1) * hdf(r2) * coulomb_screening_operator(r1, r2)
 
         piecewise_discontinuity_exclusion = 0.0
 
         # Energy returned in units of eV.
         # r1 < R, r2 < R
         integral_region_one = np.array(
-            dblquad(
-                coulomb_integrand,
-                0,
-                self.core_width,
-                0,
-                self.core_width,
-                epsabs=0.0,
-                epsrel=relative_tolerance,
-            )
+            dblquad(coulomb_integrand, 0, self.core_width, 0, self.core_width, epsabs=0.0, epsrel=relative_tolerance)
         )
 
         # r1 > R, r2 < R
@@ -759,14 +682,7 @@ class CoreShellParticle:
             )
         )
         sectioned_integral = (
-            (
-                integral_region_one
-                + integral_region_two
-                + integral_region_three
-                + integral_region_four
-            )
-            * norm_h
-            * norm_e
+            (integral_region_one + integral_region_two + integral_region_three + integral_region_four) * norm_h * norm_e
         )
 
         #!!! DO NOT DELETE THIS CODE. THIS CODE IS A TESTAMENT TO THE LIMITATIONS OF QUADRATURE ALGORITHMS.
@@ -790,20 +706,8 @@ class CoreShellParticle:
             coulomb_integrand = np.vectorize(coulomb_integrand)
             zz = coulomb_integrand(r1, r2)
             plt.imshow(zz, extent=[0, self.radius, self.radius, 0])
-            plt.hlines(
-                self.core_width,
-                xmin=0,
-                xmax=self.radius,
-                linestyles="dotted",
-                label="H-shell",
-            )
-            plt.vlines(
-                self.core_width,
-                ymin=0,
-                ymax=self.radius,
-                linestyles="dotted",
-                label="V-core",
-            )
+            plt.hlines(self.core_width, xmin=0, xmax=self.radius, linestyles="dotted", label="H-shell")
+            plt.vlines(self.core_width, ymin=0, ymax=self.radius, linestyles="dotted", label="V-core")
             plt.colorbar()
             plt.xlabel("Electron($r_a$) coordinate")
             plt.ylabel("Hole($r_b$) coordinate")
@@ -818,7 +722,7 @@ class CoreShellParticle:
 
     def interface_polarization_energy(
         self, relative_tolerance: float = 1e-5, plot_integrand: bool = False
-    ):
+    ) -> np.ndarray([float, float]):
         """
 
         Parameters
@@ -837,23 +741,13 @@ class CoreShellParticle:
         # print("L484: norms", norm_e, norm_e)
         # Electron/hole density functions.
         def edf(x):
-            return (
-                abs(_wavefunction(x, k_e, q_e, self.core_width, self.shell_width)) ** 2
-            )
+            return abs(_wavefunction(x, k_e, q_e, self.core_width, self.shell_width)) ** 2
 
         def hdf(x):
-            return (
-                abs(_wavefunction(x, k_h, q_h, self.core_width, self.shell_width)) ** 2
-            )
+            return abs(_wavefunction(x, k_h, q_h, self.core_width, self.shell_width)) ** 2
 
         def polarization_integrand(r1, r2):
-            return (
-                r1 ** 2
-                * r2 ** 2
-                * edf(r1)
-                * hdf(r2)
-                * interface_polarization_operator(r1, r2)
-            )
+            return r1 ** 2 * r2 ** 2 * edf(r1) * hdf(r2) * interface_polarization_operator(r1, r2)
 
         # print("L504, wnums", k_e, q_e, k_h, q_h)
         piecewise_discontinuity_exclusion = 0.0
@@ -861,13 +755,7 @@ class CoreShellParticle:
         # r1 < R, r2 < R
         integral_region_one = np.array(
             dblquad(
-                polarization_integrand,
-                0,
-                self.core_width,
-                0,
-                self.core_width,
-                epsabs=0.0,
-                epsrel=relative_tolerance,
+                polarization_integrand, 0, self.core_width, 0, self.core_width, epsabs=0.0, epsrel=relative_tolerance
             )
         )
 
@@ -911,14 +799,7 @@ class CoreShellParticle:
         )
 
         sectioned_integral = (
-            (
-                integral_region_one
-                + integral_region_two
-                + integral_region_three
-                + integral_region_four
-            )
-            * norm_e
-            * norm_h
+            (integral_region_one + integral_region_two + integral_region_three + integral_region_four) * norm_e * norm_h
         )
 
         #!!! DO NOT DELETE THIS CODE. THIS CODE IS A TESTAMENT TO THE LIMITATIONS OF QUADRATURE ALGORITHMS.
@@ -942,20 +823,8 @@ class CoreShellParticle:
             polarization_integrand = np.vectorize(polarization_integrand)
             zz = polarization_integrand(r1, r2)
             plt.imshow(zz, extent=[0, self.radius, self.radius, 0])
-            plt.hlines(
-                self.core_width,
-                xmin=0,
-                xmax=self.radius,
-                linestyles="dotted",
-                label="H-shell",
-            )
-            plt.vlines(
-                self.core_width,
-                ymin=0,
-                ymax=self.radius,
-                linestyles="dotted",
-                label="V-core",
-            )
+            plt.hlines(self.core_width, xmin=0, xmax=self.radius, linestyles="dotted", label="H-shell")
+            plt.vlines(self.core_width, ymin=0, ymax=self.radius, linestyles="dotted", label="V-core")
             plt.colorbar()
             plt.xlabel("Electron($r_a$) coordinate")
             plt.ylabel("Hole($r_b$) coordinate")
@@ -972,12 +841,8 @@ class CoreShellParticle:
     def _is_type_two(self):
         """"A type two QD has both conduction and valence band edges of its core either higher or lower than the
         corresponding band edges of the shell."""
-        core_higher = (self.cmat.vbe > self.smat.vbe) and (
-            self.cmat.cbe > self.smat.cbe
-        )
-        shell_higher = (self.cmat.vbe < self.smat.vbe) and (
-            self.cmat.cbe < self.smat.cbe
-        )
+        core_higher = (self.cmat.vbe > self.smat.vbe) and (self.cmat.cbe > self.smat.cbe)
+        shell_higher = (self.cmat.vbe < self.smat.vbe) and (self.cmat.cbe < self.smat.cbe)
         return core_higher or shell_higher, core_higher, shell_higher
 
     def _normalization(self):
@@ -989,18 +854,10 @@ class CoreShellParticle:
             k_e, q_e, k_h, q_h = self.calculate_wavenumbers() * n_
             # print(k_h)
             electron_density_integral = quad(
-                lambda x: x
-                * x
-                * _densityfunction(x, k_e, q_e, self.core_width, self.shell_width),
-                0,
-                self.radius,
+                lambda x: x * x * _densityfunction(x, k_e, q_e, self.core_width, self.shell_width), 0, self.radius
             )[0]
             hole_density_integral = quad(
-                lambda x: x
-                * x
-                * _densityfunction(x, k_h, q_h, self.core_width, self.shell_width),
-                0,
-                self.radius,
+                lambda x: x * x * _densityfunction(x, k_h, q_h, self.core_width, self.shell_width), 0, self.radius
             )[0]
 
             self.norm_e = 1 / electron_density_integral
