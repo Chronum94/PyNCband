@@ -20,6 +20,7 @@ __all__ = ["CoreShellParticle"]
 
 
 class CoreShellParticle:
+    BASE_SCAN_RESOLUTION = 1000
     def __init__(
         self,
         core_material: Material = None,
@@ -75,6 +76,10 @@ class CoreShellParticle:
         )
 
         self.environment_epsilon = environment_epsilon
+
+        # This is used to refine the scanning of energies.
+        # For coreshells with massive disparities, the energy scan_and_bracket needs 'adaptive' refinement.
+        self.scan_refinement_multiplier = int(max(core_width, shell_width) / min(core_width, shell_width))
 
     def set_core_width(self, x):
         """
@@ -176,7 +181,7 @@ class CoreShellParticle:
 
     # This method can currently only find cases where the energy of the lowest state is above the potential step.
     def calculate_s1_energies(
-        self, bounds=(), resolution=1000, in_ev=True
+        self, bounds=(), resolution=None, in_ev=True
     ) -> Tuple[float, float]:
         """Calculates eigenenergies of the S1 exciton state in eV.
 
@@ -194,6 +199,10 @@ class CoreShellParticle:
         s1_energies : 2-tuple of float, eV or Joules
             The s1 exciton energies of electrons and holes.
         """
+
+        if resolution is None:
+            resolution = self.BASE_SCAN_RESOLUTION * self.scan_refinement_multiplier
+            print(resolution)
 
         # Bounds in Joules.
         # TODO: Find a better way to bracket energies.

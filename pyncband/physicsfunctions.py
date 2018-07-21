@@ -95,18 +95,18 @@ def _unnormalized_core_wavefunction(
 
     Parameters
     ----------
-    x : float
+    x : float, nanometers
         The position at which to evaluate the wavefunction.
 
-    k : float, purely real or purely imaginary
-        The wavenumber/momentum of the particle.
+    k : float, 1 / nm
+        The wavenumber/momentum of the particle, purely real or purely imaginary.
 
-    core_width : float
+    core_width : float, nanometers
         The core width of the core-shell quantum dot.
 
     Returns
     -------
-    val : float, complex
+    val : float
         The value of the wavefunction at the point x.
 
     References
@@ -116,16 +116,12 @@ def _unnormalized_core_wavefunction(
     Nano Letters, 7(1), 108–115. https://doi.org/10.1021/nl0622404
 
     """
-    ksq = k ** 2  # Useful for the higher powers.
-    xsq = x ** 2
     denom = np.sin(core_width * k)
 
     # The branch is for numerical stability near x = 0.
     if abs(x) < 1e-8:
         # There is no speed penalty for **, so don't try the x * x approach.
-        # if abs(denom) < 1e-2:
-        #     raise RuntimeWarning
-        val = 1 / denom * (k - k * ksq * xsq / 6 + k * ksq ** 2 * xsq ** 2 / 120)
+        val = k / denom
     else:
         val = np.sin(k * x) / (x * denom)
     return val
@@ -158,7 +154,8 @@ def _unnormalized_shell_wavefunction(
 
     Returns
     -------
-    float, purely real or purely imaginary : The value of the wavefunction at the point x.
+    val : float
+        The value of the wavefunction at the point x.
 
     References
     ----------
@@ -328,6 +325,7 @@ def electron_eigenvalue_residual(
     core_electron_wavenumber, shell_electron_wavenumber = None, None
 
     if particle.type_one:
+        # Energy step is in the core.
         core_electron_wavenumber = (
             wavenumber_from_energy(
                 energy, particle.cmat.m_e, potential_offset=particle.ue
@@ -337,6 +335,7 @@ def electron_eigenvalue_residual(
         shell_electron_wavenumber = (
             wavenumber_from_energy(energy, particle.smat.m_e) * n_
         )
+
     elif particle.type_two:
         if particle.e_h:
             core_electron_wavenumber = (
@@ -424,6 +423,7 @@ def hole_eigenvalue_residual(
             * n_
         )
         shell_hole_wavenumber = wavenumber_from_energy(energy, particle.smat.m_h) * n_
+
     elif particle.type_two:
         if particle.e_h:
             core_hole_wavenumber = (
