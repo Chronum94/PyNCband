@@ -575,7 +575,7 @@ def make_interface_polarization_operator(
 
 def scan_and_bracket(
     f: Callable, lower_bound: float, upper_bound: float, resolution: int
-) -> Tuple[float, float]:
+) -> Tuple[float, float, bool]:
     """ Attempts to scan for roots and bracket roots of a function where the function goes from negative to positive.
 
     Parameters
@@ -599,8 +599,6 @@ def scan_and_bracket(
     y_neg2pos_change = np.argwhere(np.where(y_sign_change > 0.5, 1, 0))
     if y_neg2pos_change.shape[0] > 0:
         root_position = y_neg2pos_change[0]
-        return x[root_position], x[root_position + 1]
+        return x[root_position], x[root_position + 1], True
     else:
-        raise EnergyNotBracketedError(
-            "Try increasing the upper energy bound to bracket the energy of the first state."
-        )
+        return 0.0, 0.0, False

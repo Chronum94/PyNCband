@@ -102,7 +102,8 @@ def test_adaptive_energy_bracketing_for_high_energies():
     a = Material(1.0, 0.0, 1.0, 1.0, 1.0)
     b = Material(1.0, -0.5, 1.0, 1.0, 1.0)  # Lower band edges.
     csnc1 = CoreShellParticle(a, b, 0.1,0.1)  # Type 2 CSNC. h/e structure.
-    csnc1.calculate_s1_energies()
+    energies = csnc1.calculate_s1_energies()
+    assert np.isclose(energies[0], energies[1])
 
 
 test_adaptive_energy_bracketing_for_high_energies()

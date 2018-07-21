@@ -21,6 +21,8 @@ __all__ = ["CoreShellParticle"]
 
 class CoreShellParticle:
     BASE_SCAN_RESOLUTION = 1000
+    MAX_ENERGY_BRACKETING_ATTEMPTS = 5
+    DEFAULT_ENERGY_SEARCH_RANGE_EV = 5
     def __init__(
         self,
         core_material: Material = None,
@@ -79,7 +81,7 @@ class CoreShellParticle:
 
         # This is used to refine the scanning of energies.
         # For coreshells with massive disparities, the energy scan_and_bracket needs 'adaptive' refinement.
-        self.scan_refinement_multiplier = int(max(core_width, shell_width) / min(core_width, shell_width))
+        self.scan_refinement_multiplier = max(core_width, shell_width) / min(core_width, shell_width)
 
     def set_core_width(self, x):
         """
@@ -201,16 +203,19 @@ class CoreShellParticle:
         """
 
         if resolution is None:
-            resolution = self.BASE_SCAN_RESOLUTION * self.scan_refinement_multiplier
+            resolution = int(self.BASE_SCAN_RESOLUTION * self.scan_refinement_multiplier)
             print(resolution)
 
         # Bounds in Joules.
         # TODO: Find a better way to bracket energies.
         lower_bound_e = 0
-        upper_bound_e = 5 * e
+        upper_bound_e = self.DEFAULT_ENERGY_SEARCH_RANGE_EV * e
         lower_bound_h = 0
-        upper_bound_h = 5 * e
+        upper_bound_h = self.DEFAULT_ENERGY_SEARCH_RANGE_EV * e
 
+        # Energy brackets.
+        electron_bracket_found, hole_bracket_found = False, False
+        current_electron_bracketing_attempt, current_hole_bracketing_attempt = 0, 0
         if bounds != ():
             upper_bound_e = bounds[0] * e
 
@@ -218,8 +223,22 @@ class CoreShellParticle:
         def eer(x):
             return electron_eigenvalue_residual(x, self)
 
-        bracket = scan_and_bracket(eer, lower_bound_e, upper_bound_e, resolution)
-        self.s1_e = brentq(electron_eigenvalue_residual, *bracket, args=(self,))
+        while not electron_bracket_found and current_electron_bracketing_attempt <= self.MAX_ENERGY_BRACKETING_ATTEMPTS:
+            bracket_low, bracket_high, electron_bracket_found = scan_and_bracket(eer, lower_bound_e, upper_bound_e, resolution)
+            lower_bound_e += self.DEFAULT_ENERGY_SEARCH_RANGE_EV * e
+            upper_bound_e += self.DEFAULT_ENERGY_SEARCH_RANGE_EV * e
+            current_electron_bracketing_attempt += 1
+
+        if not electron_bracket_found:
+            raise EnergyNotBracketedError(f"Energy was not bracketed after {self.MAX_ENERGY_BRACKETING_ATTEMPTS} scans "
+                                          f"increasing by {self.DEFAULT_ENERGY_SEARCH_RANGE_EV} eV each. Consider "
+                                          "increaseing MAX_ENERGY_BRACKETING_ATTEMPTS or "
+                                          "_DEFAULT_ENERGY_SEARCH_RANGE_EV, or both.")
+        print(current_electron_bracketing_attempt)
+
+
+
+        self.s1_e = brentq(electron_eigenvalue_residual, bracket_low, bracket_high, args=(self,))
 
         if bounds != ():
             upper_bound_h = bounds[1] * e
@@ -227,10 +246,21 @@ class CoreShellParticle:
         # Hole eigenvalue residual.
         def her(x):
             return hole_eigenvalue_residual(x, self)
+        while not hole_bracket_found and current_hole_bracketing_attempt <= self.MAX_ENERGY_BRACKETING_ATTEMPTS:
+            bracket_low, bracket_high, hole_bracket_found = scan_and_bracket(her, lower_bound_h, upper_bound_h, resolution)
+            lower_bound_h += self.DEFAULT_ENERGY_SEARCH_RANGE_EV * e
+            upper_bound_h += self.DEFAULT_ENERGY_SEARCH_RANGE_EV * e
+            current_hole_bracketing_attempt += 1
 
-        bracket = scan_and_bracket(her, lower_bound_h, upper_bound_h, resolution)
+        if not hole_bracket_found:
+            raise EnergyNotBracketedError(f"Energy was not bracketed after {self.MAX_ENERGY_BRACKETING_ATTEMPTS} scans "
+                                          f"increasing by {self.DEFAULT_ENERGY_SEARCH_RANGE_EV} eV each. Consider "
+                                          "increaseing MAX_ENERGY_BRACKETING_ATTEMPTS or "
+                                          "_DEFAULT_ENERGY_SEARCH_RANGE_EV, or both.")
+        print(current_hole_bracketing_attempt)
 
-        self.s1_h = brentq(hole_eigenvalue_residual, *bracket, args=(self,))
+        self.s1_h = brentq(hole_eigenvalue_residual, bracket_low, bracket_high, args=(self,))
+
         self.energies_valid = True
 
         energy_scale = 1  # remains in Joules.
@@ -431,7 +461,7 @@ class CoreShellParticle:
                     #     "Lowering localization search limit. This goes against the paper."
                     # )
                     # TODO: This lower bound does not agree with the paper. Need to figure this garbage out.
-                    lower_bound, upper_bound = scan_and_bracket(
+                    lower_bound, upper_bound, bracket_found = scan_and_bracket(
                         min_core_loc_from_shell, 0, upper_bound, 10000
                     )
                     # print('FALLBACKLOW:', lower_bound)
@@ -493,6 +523,7 @@ class CoreShellParticle:
             min_shell_loc_from_core, np.pi / (2 * q1) + 1e-13, np.pi / q1 - 1e-13
         )
         return result
+
 
     def localization_hole_core(self, shell_width: float = None, resolution=1000):
         """Minimum core width for localization of holes for a given shell width.
@@ -567,7 +598,7 @@ class CoreShellParticle:
                     #     "Lowering localization search limit. This goes against the paper."
                     # )
                     # TODO: This lower bound does not agree with the paper. Need to figure this garbage out.
-                    lower_bound, upper_bound = scan_and_bracket(
+                    lower_bound, upper_bound, bracket_found = scan_and_bracket(
                         min_core_loc_from_shell, 0, upper_bound, resolution
                     )
                     # print('FALLBACKLOW:', lower_bound)
