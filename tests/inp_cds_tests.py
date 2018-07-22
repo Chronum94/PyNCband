@@ -23,7 +23,7 @@ def main():
     print("Using InP electron effective mass: {:0.2f}".format(
         inp_effective_electron_mass))
     print(
-        "Core \t Shell \tExp \t BG \t E(e): E(h): Coulomb: Polarization: Model(∆):"
+        "Core \t Shell \tExp \t BG \t E(e): E(h): Coulomb: Polarization: Model(Exp-Model):"
     )
     for i, shell_width in enumerate(shell_widths):
         csnc = CoreShellParticle(InP, CdS, 1.23, shell_width, 1.5)
@@ -60,7 +60,7 @@ def main():
                 col_energy_sectioned[0],
                 pol_energy_sectioned[0],
                 sectioned_integral_energy,
-                abs(experimental_bandgaps[i] - sectioned_integral_energy),
+                experimental_bandgaps[i] - sectioned_integral_energy,
             ),
             end="\t",
         )

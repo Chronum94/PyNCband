@@ -6,7 +6,11 @@ PyNCband (pronounced pink-band) is a software suite in its _very_ early stages o
 
 
 ## For users:
-This is still in development. You'll need PyCharm for any hope of using it.
+Clone the repo: \
+`git clone https://github.com/Chronum94/PyNCband.git`
+
+Run the setup: \
+`python setup.py install`
 
 ## For developers:
 I've tried to make the code as self-explanatory and lucid as possible. Nevertheless, I will be adding a contribution readme soon.
@@ -18,7 +22,8 @@ I've tried to make the code as self-explanatory and lucid as possible. Neverthel
 - [x] Polarization interaction energy calculation.
 - [x] Internal units consistency.
 - [x] Wavenumbers for Type 1 NQDs.
-- [ ] Verification against experimental data.
+- [x] Verification against experimental data.
+    - Agreement to ~0.05 eV with Table 1 results in _Nano Lett._, **2012**, _12_ (11), pp 5545–5551 
 
 ## Minimal example:
 
