@@ -2,20 +2,15 @@
 order physics that we consider.
 
 """
-from typing import Tuple
 
 import matplotlib.pyplot as plt
 import numpy as np
-from scipy.constants import hbar, e, m_e
-
-hbar_ev = hbar / e
-
 from scipy.integrate import quad, dblquad
 from scipy.optimize import brentq
 
 from .Material import Material
 from .physicsfunctions import *
-from .scaling import n_
+from .scaling import hbar_ev, m_e, wavenumber_nm_from_energy_ev
 from .utils import EnergyNotBracketedError, LocalizationNotPossibleError
 
 __all__ = ["CoreShellParticle"]
@@ -35,7 +30,9 @@ class CoreShellParticle:
         Parameters
         ----------
         core_material : Material
+            A Material object representing the core material of the nanocrystal.
         shell_material : Material
+            A Material object representing the shell material of the nanocrystal.
         core_width : float, nanometers
         shell_width : float, nanometers
 
@@ -56,6 +53,8 @@ class CoreShellParticle:
         self.core_width = core_width
         self.shell_width = shell_width
         self.radius = core_width + shell_width
+
+        # TODO: Need to add support for reverse type one.
         self.type_one = self._is_type_one()
 
         # Need to refactor this method/
@@ -68,9 +67,9 @@ class CoreShellParticle:
         self.norm_valid: bool = False
         self.norm_e, self.norm_h = None, None
 
-        # Band alignment energies, in Joules. I should see if we actually need them in Joules or not.
+        # All these energies are in eV. All internal calculations are carried out in eV.
         self.ue = np.abs(self.cmat.cbe -
-                         self.smat.cbe)  # Converting to Joules.
+                         self.smat.cbe)
         self.uh = np.abs(self.cmat.vbe - self.smat.vbe)
 
         self.bandgap = min(self.cmat.cbe, self.smat.cbe) - max(
@@ -94,6 +93,7 @@ class CoreShellParticle:
         Parameters
         ----------
         x : float, nanometers
+            The new core width.
 
         Returns
         -------
@@ -111,6 +111,7 @@ class CoreShellParticle:
         Parameters
         ----------
         x : float, nanometers
+            The new shell width.
 
         Returns
         -------
@@ -127,7 +128,7 @@ class CoreShellParticle:
 
         Returns
         -------
-        wavenumbers : [float, float, float, float] : Wavenumbers in 1 / m.
+        wavenumbers : [float, float, float, float] : Wavenumbers in 1 / nm.
             Array of wavenumbers
 
         References
@@ -140,11 +141,10 @@ class CoreShellParticle:
         https://doi.org/10.1002/smll.200800841
 
         """
-        # energy_e, energy_h = None, None
 
         energy_e, energy_h = self.calculate_s1_energies()
         # print('E:', energy_e, energy_h)
-        # This gets set to false when we change core/shell radius, etc.
+
         if self.type_one:
             return np.array([
                 wavenumber_from_energy(
@@ -174,24 +174,23 @@ class CoreShellParticle:
                         energy_h, self.smat.m_h, potential_offset=self.uh),
                 ])
 
-    # This method can currently only find cases where the energy of the lowest state is above the potential step.
+
     # noinspection PyUnboundLocalVariable,PyUnboundLocalVariable
     def calculate_s1_energies(self,
-                              bounds: Tuple[float, float] = (),
                               resolution: int = None,) -> np.ndarray:
         """Calculates eigenenergies of the S1 exciton state in eV.
 
         Parameters
         ----------
-        bounds : tuple of floats (e_lower, e_higher, h_lower, h_higher)
 
         resolution : int
             The number of points to use when scanning and bracketing.
 
         Returns
         -------
-        s1_energies : 2-tuple of float, eV or Joules
+        s1_energies : 2-array of float, eV
             The s1 exciton energies of electrons and holes.
+
         """
 
         if resolution is None:
@@ -199,8 +198,6 @@ class CoreShellParticle:
                 self.BASE_SCAN_RESOLUTION * self.scan_refinement_multiplier)
             # print(resolution)
 
-        # Bounds in Joules.
-        # TODO: Find a better way to bracket energies.
         lower_bound_e = 0
         upper_bound_e = self.DEFAULT_ELECTRON_ENERGY_SEARCH_RANGE_EV
         lower_bound_h = 0
@@ -210,8 +207,6 @@ class CoreShellParticle:
         electron_bracket_found, hole_bracket_found = (False, False)
         current_electron_bracketing_attempt, current_hole_bracketing_attempt = (
             0, 0)
-        if bounds != ():
-            upper_bound_e = bounds[0]
 
         # Electron eigenvalue residual.
         def eer(x):
@@ -237,9 +232,6 @@ class CoreShellParticle:
             bracket_low,
             bracket_high,
             args=(self,))
-
-        if bounds != ():
-            upper_bound_h = bounds[1]
 
         # Hole eigenvalue residual.
         def her(x):
@@ -269,23 +261,40 @@ class CoreShellParticle:
         return np.array([self.s1_e, self.s1_h])
 
     def plot_electron_wavefunction(self):
+        """
+
+        Returns
+        -------
+
+        """
         core_wavenumber, shell_wavenumber, _, _ = self.calculate_wavenumbers(
-        ) * n_
+        )
         x = np.linspace(0, self.radius, 1000)
         y = wavefunction(x, core_wavenumber, shell_wavenumber, self.core_width,
                          self.shell_width)
         return y / np.max(np.abs(y))
 
     def plot_hole_wavefunction(self):
+        """
+
+        Returns
+        -------
+
+        """
         _, _, core_wavenumber, shell_wavenumber = self.calculate_wavenumbers(
-        ) * n_
+        )
         x = np.linspace(0, self.radius, 1000)
         y = wavefunction(x, core_wavenumber, shell_wavenumber, self.core_width,
                          self.shell_width)
         return y / np.max(np.abs(y))
 
     def plot_potential_profile(self):
-        """Plots one half of the spherically symmetric potential well of the quantum dot."""
+        """Plots one half of the spherically symmetric potential well of the quantum dot.
+
+        Returns
+        -------
+
+        """
         plt.hlines(
             [self.cmat.vbe, self.cmat.cbe], xmin=0, xmax=self.core_width)
         plt.hlines(
@@ -380,6 +389,7 @@ class CoreShellParticle:
             _wavefunction(0,
                           self.calculate_wavenumbers()[0], self.core_width))
 
+
     def localization_electron_core(self, shell_width: float = None) -> float:
         """Minimum core width for localization of electron for a given shell width.
 
@@ -403,10 +413,8 @@ class CoreShellParticle:
                     "Electrons will not localize in the core in h/e structures."
                 )
 
-            # EVERYTHING IN THIS FUNCTION HAS BEEN SCALED WITH n_ = 1e-9. There are almost certainly better, more adaptive
-            # ways to scale. But for now, the nano- is our lord and saviour.
+
             if shell_width is None:
-                # Scaling to order unity.
                 shell_width = self.shell_width
 
             m = self.cmat.m_e / self.smat.m_e
@@ -416,13 +424,12 @@ class CoreShellParticle:
             # However, I've noticed that this lower bracket often fails. Need to look more into why.
             x1 = brentq(
                 _x_residual_function,
-                -np.pi + 1e-10,
                 0,
+                np.pi - 1e-8,
                 args=(self.cmat.m_e, self.smat.m_e))
 
-            # Same for this.
-            # SCALED TO ORDER UNITY.
-            k1 = (2 * self.cmat.m_e * m_e * self.ue) ** 0.5 / hbar_ev
+
+            k1 = (2 * self.cmat.m_e * m_e * self.ue) ** 0.5 / hbar_ev  * wavenumber_nm_from_energy_ev
 
             # print('k1', k1, 'x1', x1)
             def min_core_loc_from_shell(r: float) -> float:
@@ -433,20 +440,23 @@ class CoreShellParticle:
                 # print('m-ratio:', m)
 
                 # print('FHigh-:', min_core_loc_from_shell(np.pi / k1 - 1e-4))
-                lower_bound, upper_bound = (x1 / k1, np.pi / k1)
+                lower_bound, upper_bound = (x1 / k1 + 1e-8, np.pi / k1 - 1e-8)
                 # print('Low:', lower_bound)
                 # print('High:', upper_bound)
                 # print("FLow:", min_core_loc_from_shell(lower_bound))
                 # print("FHigh:", min_core_loc_from_shell(upper_bound))
                 # plt.plot(min_core_loc_from_shell(np.linspace(lower_bound, upper_bound, 1000)))
-
+                # plt.title("From x/pi")
+                # plt.show()
                 # This is the fallback for the case of where the sign doesn't change, and we have to drop the lower
                 # limit to 0.
                 if min_core_loc_from_shell(
                         lower_bound) * min_core_loc_from_shell(
                     upper_bound) > 0:  # No sign change.
-                    # plt.plot(min_core_loc_from_shell(np.linspace(lower_bound, upper_bound, 1000)))
-                    # plt.show()
+                    plt.plot(min_core_loc_from_shell(np.linspace(lower_bound, upper_bound, 1000)))
+                    plt.title("From 0")
+                    plt.show()
+
                     # warn(
                     #     "Lowering localization search limit. This goes against the paper."
                     # )
@@ -497,7 +507,7 @@ class CoreShellParticle:
 
         # Same for this.
         # SCALED TO ORDER UNITY.
-        q1 = (2 * self.smat.m_e * m_e * self.ue) ** 0.5 / hbar_ev
+        q1 = (2 * self.smat.m_e * m_e * self.ue) ** 0.5 / hbar_ev * wavenumber_nm_from_energy_ev
 
         # print('k1', k1, 'x1', x1)
         def min_shell_loc_from_core(h: float) -> float:
@@ -540,10 +550,8 @@ class CoreShellParticle:
                 raise LocalizationNotPossibleError(
                     "Holes will not localize in the core in e/h structures.")
 
-            # EVERYTHING IN THIS FUNCTION HAS BEEN SCALED WITH n_ = 1e-9. There are almost certainly better, more adaptive
-            # ways to scale. But for now, the nano- is our lord and saviour.
+
             if shell_width is None:
-                # Scaling to order unity.
                 shell_width = self.shell_width
 
             m = self.cmat.m_h / self.smat.m_h
@@ -555,11 +563,11 @@ class CoreShellParticle:
                 _x_residual_function,
                 -np.pi + 1e-10,
                 0,
-                args=(self.cmat.m_e, self.smat.m_e))
+                args=(self.cmat.m_h, self.smat.m_h))
 
             # Same for this.
             # SCALED TO ORDER UNITY.
-            k1 = (2 * self.cmat.m_h * m_e * self.uh) ** 0.5 / hbar_ev
+            k1 = (2 * self.cmat.m_h * m_e * self.uh) ** 0.5 / hbar_ev * wavenumber_nm_from_energy_ev
 
             # print('k1', k1, 'x1', x1)
             def min_core_loc_from_shell(r: float) -> float:
@@ -570,7 +578,7 @@ class CoreShellParticle:
                 # print('m-ratio:', m)
 
                 # print('FHigh-:', min_core_loc_from_shell(np.pi / k1 - 1e-4))
-                lower_bound, upper_bound = (x1 / k1, np.pi / k1)
+                lower_bound, upper_bound = (x1 / k1 + 1e-8, np.pi / k1 - 1e-8)
                 # print('Low:', lower_bound)
                 # print('High:', upper_bound)
                 # print("FLow:", min_core_loc_from_shell(lower_bound))
@@ -646,8 +654,8 @@ class CoreShellParticle:
             # print('FLow+:', min_core_loc_from_shell(x1 / k1 + 1e-4))
             # print("FBFHIGH:", min_core_loc_from_shell(upper_bound))
 
-        result = brentq(min_shell_loc_from_core, np.pi / (2 * q1) + 1e-13,
-                        np.pi / q1 - 1e-13)
+        result = brentq(min_shell_loc_from_core, np.pi / (2 * q1) + 1e-8,
+                        np.pi / q1 - 1e-8)
         return result
 
 

@@ -4,16 +4,14 @@ of the CoreShellparticle and/or Material classes.
 """
 
 from cmath import tan
+from typing import Callable, Union, TYPE_CHECKING, Tuple
 
 import numpy as np
-from numpy.lib.scimath import sqrt as csqrt
 from numba import jit, float64, complex128
+from numpy.lib.scimath import sqrt as csqrt
+from scipy.constants import epsilon_0 as eps0
 
-from scipy.constants import hbar, e, m_e, epsilon_0 as eps0
-
-hbar_ev = hbar / e
-from .scaling import n_
-from typing import Callable, Union, TYPE_CHECKING, Tuple
+from .scaling import n_, hbar_ev, m_e
 
 if TYPE_CHECKING:
     from .CoreShellParticle import CoreShellParticle
