@@ -20,8 +20,11 @@ def main():
     shell_widths = np.array([0.53, 1.05, 1.47, 1.90, 2.76, 3.84])
 
     experimental_bandgaps = [1.78, 1.46, 1.37, 1.32, 1.26, 1.24]
-    print("Using InP electron effective mass: {:0.2f}".format(inp_effective_electron_mass))
-    print("Core \t Shell \tExp \t BG \t E(e): E(h): Coulomb: Polarization: Model(∆):")
+    print("Using InP electron effective mass: {:0.2f}".format(
+        inp_effective_electron_mass))
+    print(
+        "Core \t Shell \tExp \t BG \t E(e): E(h): Coulomb: Polarization: Model(∆):"
+    )
     for i, shell_width in enumerate(shell_widths):
         csnc = CoreShellParticle(InP, CdS, 1.23, shell_width, 1.5)
         print(1.23, "\t", shell_width, end="\t")
@@ -29,12 +32,15 @@ def main():
         energies = np.array(csnc.calculate_s1_energies())
         # print(energies)
         plots = False
-        col_energy_sectioned = csnc.coulomb_screening_energy(plot_integrand=plots)
-        pol_energy_sectioned = csnc.interface_polarization_energy(plot_integrand=plots)
+        col_energy_sectioned = csnc.coulomb_screening_energy(
+            plot_integrand=plots)
+        pol_energy_sectioned = csnc.interface_polarization_energy(
+            plot_integrand=plots)
         # whole_integral_energy = (
         #     csnc.bandgap + np.sum(energies) + col_energy_whole[0] + pol_energy_whole[0]
         # )
-        sectioned_integral_energy = csnc.bandgap + np.sum(energies) + col_energy_sectioned[0] + pol_energy_sectioned[0]
+        sectioned_integral_energy = csnc.bandgap + np.sum(
+            energies) + col_energy_sectioned[0] + pol_energy_sectioned[0]
         # print("Col:", col_energy_whole, col_energy_sectioned, "Pol:", pol_energy)
         # print("NC bandgap:", csnc.bandgap)
         print(experimental_bandgaps[i], end="\t")
@@ -46,7 +52,8 @@ def main():
         #     end="\t",
         # )
         print(
-            "{:0.2f}\t{:0.2f}\t{:0.2f}\t{:0.2f}\t{:0.2f}\t{:0.2f}({:0.2f})".format(
+            "{:0.2f}\t{:0.2f}\t{:0.2f}\t{:0.2f}\t{:0.2f}\t{:0.2f}({:0.2f})".
+            format(
                 csnc.bandgap,
                 energies[0],
                 energies[1],

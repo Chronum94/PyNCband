@@ -31,8 +31,7 @@ def test_equal_wavenumbers_for_type_one():
     b = Material(1.0, -0.5, 1.0, 1.0, 1.0)  # Lower band edges.
     csnc = CoreShellParticle(b, a, 1.0, 1.0)  # Type 1 CSNC.
     electron_core_wavenumber, electron_shell_wavenumber, hole_core_wavenumber, hole_shell_wavenumber = (
-        csnc.calculate_wavenumbers()
-    )
+        csnc.calculate_wavenumbers())
     test.assert_allclose(electron_core_wavenumber, hole_core_wavenumber)
     test.assert_allclose(electron_shell_wavenumber, hole_shell_wavenumber)
 
@@ -42,8 +41,7 @@ def test_equal_wavenumbers_for_type_two_eh():
     b = Material(1.0, -0.5, 1.0, 1.0, 1.0)  # Lower band edges.
     csnc = CoreShellParticle(a, b, 1.0, 1.0)  # Type 1 CSNC.
     electron_core_wavenumber, electron_shell_wavenumber, hole_core_wavenumber, hole_shell_wavenumber = (
-        csnc.calculate_wavenumbers()
-    )
+        csnc.calculate_wavenumbers())
     test.assert_allclose(electron_core_wavenumber, hole_shell_wavenumber)
     test.assert_allclose(electron_shell_wavenumber, hole_core_wavenumber)
 
@@ -78,16 +76,6 @@ def test_thicker_shell_requires_smaller_core_for_localization_he():
     assert csnc2_coreloc < csnc1_coreloc
 
 
-def test_thicker_core_requires_smaller_shell_for_localization_eh():
-    a = Material(1.0, 0.0, 1.0, 1.0, 1.0)
-    b = Material(1.0, -0.5, 1.0, 1.0, 1.0)  # Lower band edges.
-    csnc1 = CoreShellParticle(b, a, 1.0, 1.0)  # Type 2 CSNC. e/h structure.
-    csnc2 = CoreShellParticle(b, a, 1.1, 1.0)  # Type 2 CSNC. e/h structure.
-    csnc1_shellloc = csnc1.localization_hole_shell()
-    csnc2_shellloc = csnc2.localization_hole_shell()
-    assert csnc2_shellloc < csnc1_shellloc
-
-
 def test_thicker_core_requires_smaller_shell_for_localization_he():
     a = Material(1.0, 0.0, 1.0, 1.0, 1.0)
     b = Material(1.0, -0.5, 1.0, 1.0, 1.0)  # Lower band edges.
@@ -98,12 +86,22 @@ def test_thicker_core_requires_smaller_shell_for_localization_he():
     assert csnc2_shellloc < csnc1_shellloc
 
 
+def test_thicker_core_requires_smaller_shell_for_localization_eh():
+    a = Material(1.0, 0.0, 1.0, 1.0, 1.0)
+    b = Material(1.0, -0.5, 1.0, 1.0, 1.0)  # Lower band edges.
+    csnc1 = CoreShellParticle(b, a, 1.0, 1.0)  # Type 2 CSNC. e/h structure.
+    csnc2 = CoreShellParticle(b, a, 1.1, 1.0)  # Type 2 CSNC. e/h structure.
+    csnc1_shellloc = csnc1.localization_hole_shell()
+    csnc2_shellloc = csnc2.localization_hole_shell()
+    assert csnc2_shellloc < csnc1_shellloc
+
+
 def test_adaptive_energy_bracketing_for_high_energies():
     a = Material(1.0, 0.0, 1.0, 1.0, 1.0)
     b = Material(1.0, -0.5, 1.0, 1.0, 1.0)  # Lower band edges.
     csnc1 = CoreShellParticle(a, b, 0.1, 0.1)  # Type 2 CSNC. h/e structure.
     energies = csnc1.calculate_s1_energies()
-    print(energies)
+    # print(energies)
     assert np.isclose(energies[0], energies[1])
 
 

@@ -5,13 +5,13 @@ __all__ = ["Material"]
 
 class Material:
     def __init__(
-        self,
-        bandgap: float,
-        conduction_band_edge: float,
-        electron_eff_mass: float,
-        hole_eff_mass: float,
-        epsilon: float,
-        name: str = None,
+            self,
+            bandgap: float,
+            conduction_band_edge: float,
+            electron_eff_mass: float,
+            hole_eff_mass: float,
+            epsilon: float,
+            name: str = None,
     ):
         """Create a simple material.
 

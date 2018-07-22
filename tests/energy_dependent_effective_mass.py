@@ -2,7 +2,6 @@ import numpy as np
 
 from pyncband import Material, CoreShellParticle
 
-
 InP = Material(1.34, 0, 1.0, 0.64, 9.6, "InP")
 CdS = Material(2.20, -0.39, 0.21, 0.68, 5.3, "CdS")
 
