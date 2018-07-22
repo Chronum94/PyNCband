@@ -31,7 +31,7 @@ def main():
         # print("Is CSNC type two? h/e?", csnc.type_two, csnc.h_e)
         energies = np.array(csnc.calculate_s1_energies())
         # print(energies)
-        plots = False
+        plots = True
         col_energy_sectioned = csnc.coulomb_screening_energy(
             plot_integrand=plots)
         pol_energy_sectioned = csnc.interface_polarization_energy(

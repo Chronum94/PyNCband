@@ -7,6 +7,9 @@ from typing import Tuple
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.constants import hbar, e, m_e
+
+hbar_ev = hbar / e
+
 from scipy.integrate import quad, dblquad
 from scipy.optimize import brentq
 
@@ -67,8 +70,8 @@ class CoreShellParticle:
 
         # Band alignment energies, in Joules. I should see if we actually need them in Joules or not.
         self.ue = np.abs(self.cmat.cbe -
-                         self.smat.cbe) * e  # Converting to Joules.
-        self.uh = np.abs(self.cmat.vbe - self.smat.vbe) * e
+                         self.smat.cbe)  # Converting to Joules.
+        self.uh = np.abs(self.cmat.vbe - self.smat.vbe)
 
         self.bandgap = min(self.cmat.cbe, self.smat.cbe) - max(
             self.cmat.vbe, self.smat.vbe)
@@ -139,7 +142,7 @@ class CoreShellParticle:
         """
         # energy_e, energy_h = None, None
 
-        energy_e, energy_h = self.calculate_s1_energies(in_ev=False)
+        energy_e, energy_h = self.calculate_s1_energies()
         # print('E:', energy_e, energy_h)
         # This gets set to false when we change core/shell radius, etc.
         if self.type_one:
@@ -202,16 +205,16 @@ class CoreShellParticle:
         # Bounds in Joules.
         # TODO: Find a better way to bracket energies.
         lower_bound_e = 0
-        upper_bound_e = self.DEFAULT_ELECTRON_ENERGY_SEARCH_RANGE_EV * e
+        upper_bound_e = self.DEFAULT_ELECTRON_ENERGY_SEARCH_RANGE_EV
         lower_bound_h = 0
-        upper_bound_h = self.DEFAULT_HOLE_ENERGY_SEARCH_RANGE_EV * e
+        upper_bound_h = self.DEFAULT_HOLE_ENERGY_SEARCH_RANGE_EV
 
         # Energy brackets.
         electron_bracket_found, hole_bracket_found = (False, False)
         current_electron_bracketing_attempt, current_hole_bracketing_attempt = (
             0, 0)
         if bounds != ():
-            upper_bound_e = bounds[0] * e
+            upper_bound_e = bounds[0]
 
         # Electron eigenvalue residual.
         def eer(x):
@@ -220,8 +223,8 @@ class CoreShellParticle:
         while not electron_bracket_found and current_electron_bracketing_attempt <= self.MAX_ENERGY_BRACKETING_ATTEMPTS:
             bracket_low, bracket_high, electron_bracket_found = scan_and_bracket(
                 eer, lower_bound_e, upper_bound_e, resolution)
-            lower_bound_e += self.DEFAULT_ELECTRON_ENERGY_SEARCH_RANGE_EV * e
-            upper_bound_e += self.DEFAULT_ELECTRON_ENERGY_SEARCH_RANGE_EV * e
+            lower_bound_e += self.DEFAULT_ELECTRON_ENERGY_SEARCH_RANGE_EV
+            upper_bound_e += self.DEFAULT_ELECTRON_ENERGY_SEARCH_RANGE_EV
             current_electron_bracketing_attempt += 1
 
         if not electron_bracket_found:
@@ -239,7 +242,7 @@ class CoreShellParticle:
             args=(self,))
 
         if bounds != ():
-            upper_bound_h = bounds[1] * e
+            upper_bound_h = bounds[1]
 
         # Hole eigenvalue residual.
         def her(x):
@@ -248,8 +251,8 @@ class CoreShellParticle:
         while not hole_bracket_found and current_hole_bracketing_attempt <= self.MAX_ENERGY_BRACKETING_ATTEMPTS:
             bracket_low, bracket_high, hole_bracket_found = scan_and_bracket(
                 her, lower_bound_h, upper_bound_h, resolution)
-            lower_bound_h += self.DEFAULT_HOLE_ENERGY_SEARCH_RANGE_EV * e
-            upper_bound_h += self.DEFAULT_HOLE_ENERGY_SEARCH_RANGE_EV * e
+            lower_bound_h += self.DEFAULT_HOLE_ENERGY_SEARCH_RANGE_EV
+            upper_bound_h += self.DEFAULT_HOLE_ENERGY_SEARCH_RANGE_EV
             current_hole_bracketing_attempt += 1
 
         if not hole_bracket_found:
@@ -265,10 +268,8 @@ class CoreShellParticle:
 
         self.energies_valid = True
 
-        energy_scale = 1  # remains in Joules.
-        if in_ev:
-            energy_scale = e
-        return self.s1_e / energy_scale, self.s1_h / energy_scale
+
+        return self.s1_e, self.s1_h
 
     def plot_electron_wavefunction(self):
         core_wavenumber, shell_wavenumber, _, _ = self.calculate_wavenumbers(
@@ -310,7 +311,7 @@ class CoreShellParticle:
         overlap : float
             The electron-hole overlap integral.
         """
-        k_e, q_e, k_h, q_h = self.calculate_wavenumbers() * n_
+        k_e, q_e, k_h, q_h = self.calculate_wavenumbers()
         K_e, Q_e, K_h, Q_h = (
             np.sin(k_e * self.core_width),
             np.sin(q_e * self.shell_width),
@@ -350,7 +351,7 @@ class CoreShellParticle:
 
         """
         # Scaling to 1 / nm.
-        k_e, q_e, k_h, q_h = self.calculate_wavenumbers() * n_
+        k_e, q_e, k_h, q_h = self.calculate_wavenumbers()
         norm_e, norm_h = self._normalization()
 
         def ewf(x):
@@ -424,7 +425,7 @@ class CoreShellParticle:
 
             # Same for this.
             # SCALED TO ORDER UNITY.
-            k1 = (2 * self.cmat.m_e * m_e * self.ue) ** 0.5 / hbar * n_
+            k1 = (2 * self.cmat.m_e * m_e * self.ue) ** 0.5 / hbar_ev
 
             # print('k1', k1, 'x1', x1)
             def min_core_loc_from_shell(r: float) -> float:
@@ -499,7 +500,7 @@ class CoreShellParticle:
 
         # Same for this.
         # SCALED TO ORDER UNITY.
-        q1 = (2 * self.smat.m_e * m_e * self.ue) ** 0.5 / hbar * n_
+        q1 = (2 * self.smat.m_e * m_e * self.ue) ** 0.5 / hbar_ev
 
         # print('k1', k1, 'x1', x1)
         def min_shell_loc_from_core(h: float) -> float:
@@ -561,7 +562,7 @@ class CoreShellParticle:
 
             # Same for this.
             # SCALED TO ORDER UNITY.
-            k1 = (2 * self.cmat.m_h * m_e * self.uh) ** 0.5 / hbar * n_
+            k1 = (2 * self.cmat.m_h * m_e * self.uh) ** 0.5 / hbar_ev
 
             # print('k1', k1, 'x1', x1)
             def min_core_loc_from_shell(r: float) -> float:
@@ -636,7 +637,7 @@ class CoreShellParticle:
 
         # Same for this.
         # SCALED TO ORDER UNITY.
-        q1 = (2 * self.smat.m_h * m_e * self.uh) ** 0.5 / hbar * n_
+        q1 = (2 * self.smat.m_h * m_e * self.uh) ** 0.5 / hbar_ev
 
         # print('k1', k1, 'x1', x1)
         def min_shell_loc_from_core(h: float) -> float:
@@ -651,6 +652,7 @@ class CoreShellParticle:
         result = brentq(min_shell_loc_from_core, np.pi / (2 * q1) + 1e-13,
                         np.pi / q1 - 1e-13)
         return result
+
 
     def coulomb_screening_energy(self,
                                  relative_tolerance: float = 1e-5,
@@ -670,7 +672,8 @@ class CoreShellParticle:
 
         """
         coulomb_screening_operator = make_coulomb_screening_operator(self)
-        k_e, q_e, k_h, q_h = self.calculate_wavenumbers() * n_
+        k_e, q_e, k_h, q_h = self.calculate_wavenumbers()
+        # print(k_e, q_e)
         # print(k_e, k_h, q_e, q_h)
         norm_e, norm_h = self._normalization()
 
@@ -709,7 +712,6 @@ class CoreShellParticle:
                 self.radius,
                 0,
                 self.core_width,
-                epsabs=0.0,
                 epsrel=relative_tolerance,
             ))
 
@@ -803,7 +805,7 @@ class CoreShellParticle:
         interface_polarization_operator = make_interface_polarization_operator(
             self)
 
-        k_e, q_e, k_h, q_h = self.calculate_wavenumbers() * n_
+        k_e, q_e, k_h, q_h = self.calculate_wavenumbers()
         norm_e, norm_h = self._normalization()
 
         # print("L484: norms", norm_e, norm_e)
@@ -938,7 +940,7 @@ class CoreShellParticle:
             return self.norm_e, self.norm_h
 
         else:
-            k_e, q_e, k_h, q_h = self.calculate_wavenumbers() * n_
+            k_e, q_e, k_h, q_h = self.calculate_wavenumbers()
             # print(k_h)
             electron_density_integral = quad(
                 lambda x: x * x * _densityfunction(x, k_e, q_e, self.core_width, self.shell_width),

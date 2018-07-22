@@ -6,8 +6,8 @@ from numba import jit, float64, complex128
 
 from scipy.constants import hbar, e, m_e, epsilon_0 as eps0
 
+hbar_ev = hbar / e
 from .scaling import n_
-from .utils import EnergyNotBracketedError
 from typing import Callable, Union, TYPE_CHECKING, Tuple
 
 if TYPE_CHECKING:
@@ -278,7 +278,7 @@ def wavenumber_from_energy(energy: float,
     wavenumber: float 1 / m
     """
 
-    return csqrt(2 * mass * m_e * (energy - potential_offset)) / hbar
+    return csqrt(2 * mass * m_e * (energy - potential_offset)) / hbar_ev * 2.498301248024997
 
 
 def electron_eigenvalue_residual(energy: floatarray,
@@ -315,21 +315,21 @@ def electron_eigenvalue_residual(energy: floatarray,
     if particle.type_one:
         # Energy step is in the core.
         core_electron_wavenumber = wavenumber_from_energy(
-            energy, particle.cmat.m_e, potential_offset=particle.ue) * n_
+            energy, particle.cmat.m_e, potential_offset=particle.ue)
         shell_electron_wavenumber = wavenumber_from_energy(
-            energy, particle.smat.m_e) * n_
+            energy, particle.smat.m_e)
 
     elif particle.type_two:
         if particle.e_h:
             core_electron_wavenumber = wavenumber_from_energy(
-                energy, particle.cmat.m_e) * n_
+                energy, particle.cmat.m_e)
             shell_electron_wavenumber = (wavenumber_from_energy(
-                energy, particle.smat.m_e, potential_offset=particle.ue) * n_)
+                energy, particle.smat.m_e, potential_offset=particle.ue))
         elif particle.h_e:
             core_electron_wavenumber = (wavenumber_from_energy(
-                energy, particle.cmat.m_e, potential_offset=particle.ue) * n_)
+                energy, particle.cmat.m_e, potential_offset=particle.ue))
             shell_electron_wavenumber = wavenumber_from_energy(
-                energy, particle.smat.m_e) * n_
+                energy, particle.smat.m_e)
     core_x = core_electron_wavenumber * particle.core_width
     shell_x = shell_electron_wavenumber * particle.shell_width
     core_width = particle.core_width
@@ -383,21 +383,21 @@ def hole_eigenvalue_residual(energy: floatarray,
     core_hole_wavenumber, shell_hole_wavenumber = (None, None)
     if particle.type_one:
         core_hole_wavenumber = wavenumber_from_energy(
-            energy, particle.cmat.m_h, potential_offset=particle.uh) * n_
+            energy, particle.cmat.m_h, potential_offset=particle.uh)
         shell_hole_wavenumber = wavenumber_from_energy(energy,
-                                                       particle.smat.m_h) * n_
+                                                       particle.smat.m_h)
 
     elif particle.type_two:
         if particle.e_h:
             core_hole_wavenumber = wavenumber_from_energy(
-                energy, particle.cmat.m_h, potential_offset=particle.uh) * n_
+                energy, particle.cmat.m_h, potential_offset=particle.uh)
             shell_hole_wavenumber = wavenumber_from_energy(
-                energy, particle.smat.m_h) * n_
+                energy, particle.smat.m_h)
         elif particle.h_e:
             core_hole_wavenumber = wavenumber_from_energy(
-                energy, particle.cmat.m_h) * n_
+                energy, particle.cmat.m_h)
             shell_hole_wavenumber = wavenumber_from_energy(
-                energy, particle.smat.m_h, potential_offset=particle.uh) * n_
+                energy, particle.smat.m_h, potential_offset=particle.uh)
     core_x = core_hole_wavenumber * particle.core_width
     shell_x = shell_hole_wavenumber * particle.shell_width
     core_width = particle.core_width
@@ -476,13 +476,13 @@ def make_coulomb_screening_operator(
     def coulomb_screening_operator(r_a: float, r_b: float) -> float:
         rmax = max(r_a, r_b)
         r_c = core_width
-        taz = 1.0  # Theta at zero, theta being step function.
+        taz = 0.5  # Theta at zero, theta being step function.
 
         # The two step functions that are used to calculate the charge regions in the Coulomb interaction operator.
         step1, step2 = (_heaviside(r_c - r_a, taz), _heaviside(r_c - r_b, taz))
         val = -step1 * step2 / (rmax * core_eps) - (1 - step1 + 1 - step2) / (
             2 * rmax * shell_eps)
-        return val * e / (n_ * eps0) * 1 / (4.0 * np.pi
+        return val * e / n_ * 1 / (4.0 * np.pi * eps0
                                             )  # Scaling to eV and meters.
 
     return coulomb_screening_operator
