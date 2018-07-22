@@ -3,12 +3,11 @@ order physics that we consider.
 
 """
 from typing import Tuple
-from warnings import warn
 
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.constants import hbar, e, m_e
-from scipy.integrate import quad, dblquad, romb
+from scipy.integrate import quad, dblquad
 from scipy.optimize import brentq
 
 from .Material import Material
@@ -173,6 +172,7 @@ class CoreShellParticle:
                 ])
 
     # This method can currently only find cases where the energy of the lowest state is above the potential step.
+    # noinspection PyUnboundLocalVariable,PyUnboundLocalVariable
     def calculate_s1_energies(self,
                               bounds: Tuple[float, float] = (),
                               resolution: int = None,
@@ -236,7 +236,7 @@ class CoreShellParticle:
             electron_eigenvalue_residual,
             bracket_low,
             bracket_high,
-            args=(self, ))
+            args=(self,))
 
         if bounds != ():
             upper_bound_h = bounds[1] * e
@@ -261,14 +261,14 @@ class CoreShellParticle:
         # print(current_hole_bracketing_attempt)
 
         self.s1_h = brentq(
-            hole_eigenvalue_residual, bracket_low, bracket_high, args=(self, ))
+            hole_eigenvalue_residual, bracket_low, bracket_high, args=(self,))
 
         self.energies_valid = True
 
         energy_scale = 1  # remains in Joules.
         if in_ev:
             energy_scale = e
-        return (self.s1_e / energy_scale, self.s1_h / energy_scale)
+        return self.s1_e / energy_scale, self.s1_h / energy_scale
 
     def plot_electron_wavefunction(self):
         core_wavenumber, shell_wavenumber, _, _ = self.calculate_wavenumbers(
@@ -320,8 +320,8 @@ class CoreShellParticle:
         norm_e, norm_h = self._normalization()
 
         R, H = self.core_width, self.shell_width
-        core_denom = K_e * K_h * 2 * (k_h**2 - k_e**2)
-        shell_denom = Q_e * Q_h * 2 * (q_h**2 - q_e**2)
+        core_denom = K_e * K_h * 2 * (k_h ** 2 - k_e ** 2)
+        shell_denom = Q_e * Q_h * 2 * (q_h ** 2 - q_e ** 2)
         # The accompanying formula for these are in a Maxima file.
         # QDWavefunctionsAndIntegrals.wxmx
         core_integral = -((k_h - k_e) * np.sin(R * (k_h + k_e)) -
@@ -332,7 +332,7 @@ class CoreShellParticle:
         #     print(core_denom, shell_denom)
         #     print(R, H)
         #     raise RuntimeWarning("TINY DENOM.")
-        return abs(core_integral + shell_integral)**2 * norm_h * norm_e
+        return abs(core_integral + shell_integral) ** 2 * norm_h * norm_e
 
     def numerical_overlap_integral(self):
         """Calculates the numerical electron-hole overlap integral.
@@ -372,7 +372,7 @@ class CoreShellParticle:
         # Return both the answer and order-of-magnitude of error.
         # print(norm_e, norm_h)
         return (abs((overlap_integral_real[0] + 1j * overlap_integral_imag[0]))
-                **2 * norm_e * norm_h  # ,
+                ** 2 * norm_e * norm_h  # ,
                 # (overlap_integral_imag[1] + overlap_integral_real[1]) ** 2,
                 )
 
@@ -424,7 +424,7 @@ class CoreShellParticle:
 
             # Same for this.
             # SCALED TO ORDER UNITY.
-            k1 = (2 * self.cmat.m_e * m_e * self.ue)**0.5 / hbar * n_
+            k1 = (2 * self.cmat.m_e * m_e * self.ue) ** 0.5 / hbar * n_
 
             # print('k1', k1, 'x1', x1)
             def min_core_loc_from_shell(r: float) -> float:
@@ -446,7 +446,7 @@ class CoreShellParticle:
                 # limit to 0.
                 if min_core_loc_from_shell(
                         lower_bound) * min_core_loc_from_shell(
-                            upper_bound) > 0:  # No sign change.
+                    upper_bound) > 0:  # No sign change.
                     # plt.plot(min_core_loc_from_shell(np.linspace(lower_bound, upper_bound, 1000)))
                     # plt.show()
                     # warn(
@@ -499,7 +499,7 @@ class CoreShellParticle:
 
         # Same for this.
         # SCALED TO ORDER UNITY.
-        q1 = (2 * self.smat.m_e * m_e * self.ue)**0.5 / hbar * n_
+        q1 = (2 * self.smat.m_e * m_e * self.ue) ** 0.5 / hbar * n_
 
         # print('k1', k1, 'x1', x1)
         def min_shell_loc_from_core(h: float) -> float:
@@ -561,7 +561,7 @@ class CoreShellParticle:
 
             # Same for this.
             # SCALED TO ORDER UNITY.
-            k1 = (2 * self.cmat.m_h * m_e * self.uh)**0.5 / hbar * n_
+            k1 = (2 * self.cmat.m_h * m_e * self.uh) ** 0.5 / hbar * n_
 
             # print('k1', k1, 'x1', x1)
             def min_core_loc_from_shell(r: float) -> float:
@@ -583,7 +583,7 @@ class CoreShellParticle:
                 # limit to 0.
                 if min_core_loc_from_shell(
                         lower_bound) * min_core_loc_from_shell(
-                            upper_bound) > 0:  # No sign change.
+                    upper_bound) > 0:  # No sign change.
                     # plt.plot(min_core_loc_from_shell(np.linspace(lower_bound, upper_bound, 1000)))
                     # plt.show()
                     # warn(
@@ -636,7 +636,7 @@ class CoreShellParticle:
 
         # Same for this.
         # SCALED TO ORDER UNITY.
-        q1 = (2 * self.smat.m_h * m_e * self.uh)**0.5 / hbar * n_
+        q1 = (2 * self.smat.m_h * m_e * self.uh) ** 0.5 / hbar * n_
 
         # print('k1', k1, 'x1', x1)
         def min_shell_loc_from_core(h: float) -> float:
@@ -678,12 +678,12 @@ class CoreShellParticle:
         def edf(x):
             return abs(
                 _wavefunction(x, k_e, q_e, self.core_width,
-                              self.shell_width))**2
+                              self.shell_width)) ** 2
 
         def hdf(x):
             return abs(
                 _wavefunction(x, k_h, q_h, self.core_width,
-                              self.shell_width))**2
+                              self.shell_width)) ** 2
 
         coulomb_integrand = lambda r1, r2: r1 ** 2 * r2 ** 2 * edf(r1) * hdf(r2) * coulomb_screening_operator(r1, r2)
 
@@ -737,10 +737,10 @@ class CoreShellParticle:
                 epsrel=relative_tolerance,
             ))
         sectioned_integral = (
-            (integral_region_one + integral_region_two + integral_region_three
-             + integral_region_four) * norm_h * norm_e)
+                (integral_region_one + integral_region_two + integral_region_three
+                 + integral_region_four) * norm_h * norm_e)
 
-        #!!! DO NOT DELETE THIS CODE. THIS CODE IS A TESTAMENT TO THE LIMITATIONS OF QUADRATURE ALGORITHMS.
+        # !!! DO NOT DELETE THIS CODE. THIS CODE IS A TESTAMENT TO THE LIMITATIONS OF QUADRATURE ALGORITHMS.
         # whole_integral = (
         #     np.array(
         #         dblquad(
@@ -780,7 +780,7 @@ class CoreShellParticle:
             plt.show()
         #
         #
-        #!!! ALSO THIS. THIS IS A ROMBERG INTEGRAL TO SHOW US THAT THE PIECEWISE APPROACH IS CORRECT.
+        # !!! ALSO THIS. THIS IS A ROMBERG INTEGRAL TO SHOW US THAT THE PIECEWISE APPROACH IS CORRECT.
         # trapzed = romb(romb(zz)) * dr * dr * norm_e * norm_h
         # print(whole_integral[0], sectioned_integral[0], trapzed)
         return sectioned_integral
@@ -811,15 +811,15 @@ class CoreShellParticle:
         def edf(x):
             return abs(
                 _wavefunction(x, k_e, q_e, self.core_width,
-                              self.shell_width))**2
+                              self.shell_width)) ** 2
 
         def hdf(x):
             return abs(
                 _wavefunction(x, k_h, q_h, self.core_width,
-                              self.shell_width))**2
+                              self.shell_width)) ** 2
 
         def polarization_integrand(r1, r2):
-            return r1**2 * r2**2 * edf(r1) * hdf(
+            return r1 ** 2 * r2 ** 2 * edf(r1) * hdf(
                 r2) * interface_polarization_operator(r1, r2)
 
         # print("L504, wnums", k_e, q_e, k_h, q_h)
@@ -873,10 +873,10 @@ class CoreShellParticle:
             ))
 
         sectioned_integral = (
-            (integral_region_one + integral_region_two + integral_region_three
-             + integral_region_four) * norm_e * norm_h)
+                (integral_region_one + integral_region_two + integral_region_three
+                 + integral_region_four) * norm_e * norm_h)
 
-        #!!! DO NOT DELETE THIS CODE. THIS CODE IS A TESTAMENT TO THE LIMITATIONS OF QUADRATURE ALGORITHMS.
+        # !!! DO NOT DELETE THIS CODE. THIS CODE IS A TESTAMENT TO THE LIMITATIONS OF QUADRATURE ALGORITHMS.
         # whole_integral = (
         #     np.array(
         #         dblquad(
@@ -930,7 +930,7 @@ class CoreShellParticle:
                                                            self.smat.cbe)
         shell_higher = (self.cmat.vbe < self.smat.vbe) and (self.cmat.cbe <
                                                             self.smat.cbe)
-        return (core_higher or shell_higher, core_higher, shell_higher)
+        return core_higher or shell_higher, core_higher, shell_higher
 
     def _normalization(self):
 

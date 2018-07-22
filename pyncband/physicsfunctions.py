@@ -547,6 +547,6 @@ def scan_and_bracket(f: Callable, lower_bound: float, upper_bound: float,
     y_neg2pos_change = np.argwhere(np.where(y_sign_change > 0.5, 1, 0))
     if y_neg2pos_change.shape[0] > 0:
         root_position = y_neg2pos_change[0]
-        return (x[root_position], x[root_position + 1], True)
+        return x[root_position], x[root_position + 1], True
     else:
         return 0.0, 0.0, False

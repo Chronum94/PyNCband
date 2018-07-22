@@ -31,7 +31,7 @@ I've tried to make the code as self-explanatory and lucid as possible. Neverthel
 import numpy as np
 from scipy.constants import e
 
-from pyncband import *
+from pyncband import Material, CoreShellParticle
 
 # Declare a material with a bandgap of 1.34 eV, conduction band edge offset of 0,
 # electron(hole) effective mass of 0.07(0.64), and dielectric constant of 9.6. Optionally,
