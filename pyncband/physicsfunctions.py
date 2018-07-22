@@ -1,3 +1,8 @@
+"""This module contains all of the physics and numerics functions required for the implementation of the methods
+of the CoreShellparticle and/or Material classes.
+
+"""
+
 from cmath import tan
 
 import numpy as np
@@ -12,8 +17,6 @@ from typing import Callable, Union, TYPE_CHECKING, Tuple
 
 if TYPE_CHECKING:
     from .CoreShellParticle import CoreShellParticle
-
-# This only imports the  CoreShellFunction class and is done because otherwise the cyclic import fails.
 
 __all__ = [
     "unnormalized_core_wavefunction",
@@ -37,9 +40,10 @@ floatcomplex = Union[float, complex]
 floatarray = Union[float, np.ndarray]
 
 
+# Using my own Heaviside because Numba doesn't support np.heaviside yet. This may change in the future.
 @jit([float64(float64, float64)], nopython=True)
 def _heaviside(x1: float, x2: float) -> float:
-    """A custom Heaviside function for number support.
+    """A custom Heaviside function for Numba support.
 
     Parameters
     ----------
@@ -51,7 +55,8 @@ def _heaviside(x1: float, x2: float) -> float:
 
     Returns
     -------
-    float : The value of the Heaviside function at the given point.
+    val : float
+        The value of the Heaviside function at the given point.
 
     """
     if x1 > 0:
@@ -64,7 +69,7 @@ def _heaviside(x1: float, x2: float) -> float:
 
 # @vectorize(nopython=True)
 @jit([float64(float64), float64(complex128)], nopython=True)
-def _tanxdivx(x: floatcomplex) -> floatcomplex:
+def _tanxdivx(x: floatcomplex) -> float:
     """A custom tan(x)/x function for complex purely real or purely imaginary x, stabilized around |x| = 0,
 
     Parameters
@@ -74,11 +79,12 @@ def _tanxdivx(x: floatcomplex) -> floatcomplex:
 
     Returns
     -------
-    float : The real function value at the point.
+    val : float
+        The real function value at the point.
 
     """
     # Close to 0, tan(x)/x is just 1, to 15 places of decimal.
-    if abs(x) < 1e-10:
+    if abs(x) < 1e-8:
         return 1.0
     else:
         return (tan(x) / x).real
@@ -92,14 +98,18 @@ tanxdivx = np.vectorize(
 @jit(nopython=True)
 def _unnormalized_core_wavefunction(x: float, k: floatcomplex,
                                     core_width: float) -> floatcomplex:
-    """Returns the value of the S1 spherically symmetric wavefunction in the core.
+    """Returns the value of the S-n pherically symmetric wavefunction in the core.
+
+    Depending on the values of the wavenumber k, will return the radial component of the solution for Schrodinger's
+    equation in the core of the semiconductor nanocrystal. Typically used for the lowest k to give the S1 wavefunction
+    values.
 
     Parameters
     ----------
     x : float, nanometers
         The position at which to evaluate the wavefunction.
 
-    k : float, 1 / nm
+    k : float, purely real or purely imaginary, 1 / nm
         The wavenumber/momentum of the particle, purely real or purely imaginary.
 
     core_width : float, nanometers
@@ -138,18 +148,22 @@ def _unnormalized_shell_wavefunction(x: float, q: floatcomplex,
                                      shell_width: float) -> floatcomplex:
     """Returns the value of the S1 spherically symmetric wavefunction in the shell.
 
+    Depending on the values of the wavenumber q, will return the radial component of the solution for Schrodinger's
+    equation in the shell of the semiconductor nanocrystal. Typically used for the lowest q to give the S1 wavefunction
+    values.
+
     Parameters
     ----------
-    x : float
+    x : float, nanometers
         The position at which to evaluate the wavefunction.
 
-    q : float, purely real or purely imaginary
+    q : float, purely real or purely imaginary, 1 / nm
         The wavenumber/momentum of the particle.
 
-    core_width : float
+    core_width : float, nanometers
         The core width of the core-shell quantum dot.
 
-    shell_width : float
+    shell_width : float, nanometers
         The shell width of the core-shell quantum dot.
 
     Returns
@@ -179,50 +193,46 @@ unnormalized_shell_wavefunction = np.vectorize(
 def _wavefunction(x: float, core_wavenumber: floatcomplex,
                   shell_wavenumber: floatcomplex, core_width: float,
                   shell_width: float) -> floatcomplex:
-    """Evaluates the radially symmetric wavefunction values of the core-shell QD at given points.
+    """Evaluates the radially symmetric wavefunction values of the core-shell semiconductor nanocrystal at given point.
 
-    Evaluates the full radial wavefunction of the core-shell quantum dot at given sample points `x`, with core
-    wavevector `k` and shell wavevector `q`. The `core_width` and `shell_width` variables are obvious.
+    A simple wrapper that calls either __unnormalized_core_wavefunction or __unnormalized_shell_wavefunction with core
+    wavevector `k` or shell wavevector `q`. The `core_width` and `shell_width` variables are obvious.
 
     Parameters
     ----------
 
-    x : float
-        The radial point at which to evaluate the wavefunction. x can contain 0, since the core wavefunction has been
+    x : float, nanometers
+        The radial point at which to evaluate the wavefunction. x can be 0, since the core wavefunction has been
         numerically stabilized at 0.
 
-    core_wavenumber : complex
+    core_wavenumber : complex, 1 / nm
         The (potentially) complex wavevector of the electron/hole in the core of the core-shell particle.
 
-    shell_wavenumber : complex
+    shell_wavenumber : complex, 1 / nm
         The (potentially) complex wavevector of the electron/hole in the shell of the core-shell particle.
 
-    core_width : float
+    core_width : float, nanometers
         The real-valued width of the core of the nanoparticle.
 
-    shell_width : float
+    shell_width : float, nanometers
         The real-valued width of the shell of the nanoparticle.
 
     References
     ----------
     .. [1] Piryatinski, A., Ivanov, S. A., Tretiak, S., & Klimov, V. I. (2007). Effect of Quantum and Dielectric
         Confinement on the Exciton−Exciton Interaction Energy in Type II Core/Shell Semiconductor Nanocrystals.
-        Nano Letters, 7(1), 108–115. https://doi.org/10.1021/nl0622404"""
+        Nano Letters, 7(1), 108–115. https://doi.org/10.1021/nl0622404
 
-    def cwf(xarg):
-        return _unnormalized_core_wavefunction(xarg, core_wavenumber,
-                                               core_width)
-
-    def swf(xarg):
-        return _unnormalized_shell_wavefunction(xarg, shell_wavenumber,
-                                                core_width, shell_width)
+    """
 
     particle_width = core_width + shell_width
 
     if 0 <= x < core_width:
-        return cwf(x)
+        return _unnormalized_core_wavefunction(x, core_wavenumber,
+                                               core_width)
     elif core_width <= x < particle_width:
-        return swf(x)
+        return _unnormalized_shell_wavefunction(x, shell_wavenumber,
+                                                core_width, shell_width)
     else:
         return 0
 
@@ -237,9 +247,10 @@ def _densityfunction(r: float, core_wavenumber: floatcomplex,
                      shell_width: float) -> float:
     """Returns the probability density from a wavefunction at a point in the core-shell.
 
+
     Parameters
     ----------
-    r : float
+    r : float, nanometers
         The point at which to evaluate the probability density.
 
     core_wavenumber : float, purely real or purely imaginary, 1 / nanometers
@@ -250,10 +261,13 @@ def _densityfunction(r: float, core_wavenumber: floatcomplex,
 
     core_width : float, nanometers
         The width of the core of the quantum dot.
+
     shell_width : float, nanometers
         The width of the shell of the quantum dot.
     Returns
     -------
+    val : float
+        The probabilty density of the partcle at that radial point in the core-shell semiconductor nanocrystal.
 
     """
     return abs(
@@ -265,19 +279,26 @@ def _densityfunction(r: float, core_wavenumber: floatcomplex,
 def wavenumber_from_energy(energy: float,
                            mass: float,
                            potential_offset: float = 0) -> floatcomplex:
-    """ Calculates wavenumber from energy in units of 1/m.
+    """ Calculates wavenumber from energy.
 
     Parameters
     ----------
-    energy : float, Joules
+    energy : float, eV
+        The energy of the state.
+
     mass : float, electron-masses
-    potential_offset : float, Joules
+        The mass of the particle.
+
+    potential_offset : float, eV
+        If the particle is in a region of nonzero potential energy, then the potential offset.
 
     Returns
     -------
-    wavenumber: float 1 / m
+    wavenumber: float, 1 / nm
+
     """
 
+    # The 2.498... is to convert to 1/nm when using eV and hbar in eV-s together.
     return csqrt(2 * mass * m_e * (energy - potential_offset)) / hbar_ev * 2.498301248024997
 
 
@@ -286,13 +307,10 @@ def electron_eigenvalue_residual(energy: floatarray,
     """This function returns the residual of the electron energy level eigenvalue equation. Used with root-finding
     methods to calculate the lowest energy state.
 
-    As of 11-July-2018, this code is not numerically stable if a few tans go to 0. This will be fixed, since the limits
-    exist, and they will be conditionally dealt with.
-
     Parameters
     ----------
 
-    energy : float, Joules
+    energy : float, eV
         The energy for which to calculate the wavevector of an electron in the nanoparticle.
 
     particle : CoreShellParticle
@@ -356,13 +374,10 @@ def hole_eigenvalue_residual(energy: floatarray,
     """This function returns the residual of the hole energy level eigenvalue equation. Used with root-finding
     methods to calculate the lowest energy state.
 
-    As of 11-July-2018, this code is not numerically stable if a few tans go to 0. This will be fixed, since the limits
-    exist, and they will be conditionally dealt with.
-
     Parameters
     ----------
 
-    energy : float, Joules
+    energy : float, eV
         The energy for which to calculate the wavevector of a hole in in the nanoparticle.
 
     particle : CoreShellParticle
@@ -421,8 +436,10 @@ def _x_residual_function(x: float, mass_in_core: float,
     ----------
     x : float
         Size parameter (wavenumber * core radius) in the core of the core-shell quantum dor. From equation 3 in [1].
+
     mass_in_core : float, electron-masses
         Effective mass of the electron/hole in the core of the core-shell quantum dot.
+
     mass_in_shell : float, electron-masses
         Effective mass of the electron/hole in the shell of the core-shell quantum dot.
 
@@ -433,14 +450,13 @@ def _x_residual_function(x: float, mass_in_core: float,
 
     References
     ----------
-
     .. [1] Piryatinski, A., Ivanov, S. A., Tretiak, S., & Klimov, V. I. (2007). Effect of Quantum and Dielectric \
     Confinement on the Exciton−Exciton Interaction Energy in Type II Core/Shell Semiconductor Nanocrystals. \
     Nano Letters, 7(1), 108–115. https://doi.org/10.1021/nl0622404
 
     """
     mass_ratio = mass_in_shell / mass_in_core
-    if abs(x) < 1e-10:
+    if abs(x) < 1e-8:
         return mass_ratio
     else:
         return 1 / _tanxdivx(x) + mass_ratio - 1
@@ -448,11 +464,14 @@ def _x_residual_function(x: float, mass_in_core: float,
 
 def make_coulomb_screening_operator(
         coreshellparticle: "CoreShellParticle") -> Callable:
-    """
+    """Creates a Coulomb interaction operator function for a particular function.
+
+    Currently, this assumes opposite charges on the two interacting particles. This will likely need to be changed once
+    biexcitons are considered.
 
     Parameters
     ----------
-    coreshellparticle
+    coreshellparticle : CoreShellParticle
 
     Returns
     -------
@@ -461,13 +480,13 @@ def make_coulomb_screening_operator(
 
     References
     ----------
-
     .. [1] Piryatinski, A., Ivanov, S. A., Tretiak, S., & Klimov, V. I. (2007). Effect of Quantum and Dielectric \
     Confinement on the Exciton−Exciton Interaction Energy in Type II Core/Shell Semiconductor Nanocrystals. \
     Nano Letters, 7(1), 108–115. https://doi.org/10.1021/nl0622404
 
     """
 
+    # Stripping these variables of the coreshellparticle so Numba can use them.
     core_width = coreshellparticle.core_width
     core_eps, shell_eps = (coreshellparticle.cmat.eps,
                            coreshellparticle.smat.eps)
@@ -482,8 +501,7 @@ def make_coulomb_screening_operator(
         step1, step2 = (_heaviside(r_c - r_a, taz), _heaviside(r_c - r_b, taz))
         val = -step1 * step2 / (rmax * core_eps) - (1 - step1 + 1 - step2) / (
             2 * rmax * shell_eps)
-        return val * e / n_ * 1 / (4.0 * np.pi * eps0
-                                            )  # Scaling to eV and meters.
+        return val * e / n_ * 1 / (4.0 * np.pi * eps0)  # Scaling to eV.
 
     return coulomb_screening_operator
 
@@ -494,14 +512,15 @@ def make_interface_polarization_operator(
 
     Parameters
     ----------
-    coreshellparticle
+    coreshellparticle : CoreShellParticle
 
     Returns
     -------
-
+    coulomb_screening_operator : Callable(r1, r2)
+        The interface polarization operator as a function of the two radial coordinates of the two excitons.
     """
 
-    # Scaling lengths to nm units.
+    # Stripping variables of coreshellparticle so Numba can use them.
     core_width = coreshellparticle.core_width
     core_eps, shell_eps = (coreshellparticle.cmat.eps,
                            coreshellparticle.smat.eps)
@@ -512,7 +531,7 @@ def make_interface_polarization_operator(
     def interface_polarization_operator(r_a: float, r_b: float) -> float:
         r_c = core_width
         r_p = particle_radius
-        taz = 1.0  # Theta at zero, theta being step function.
+        taz = 0.5  # Theta at zero, theta being step function.
         val = -_heaviside(r_c - r_a, taz) * _heaviside(
             r_c - r_b, taz) * (core_eps / shell_eps - 1) / (r_c * core_eps) - (
                 shell_eps / env_eps - 1) / (2 * r_p * shell_eps)
@@ -523,19 +542,26 @@ def make_interface_polarization_operator(
 
 
 def scan_and_bracket(f: Callable, lower_bound: float, upper_bound: float,
-                     resolution: int) -> Tuple[float, float, bool]:
-    """ Attempts to scan for roots and bracket roots of a function where the function goes from negative to positive.
+                     resolution: int) -> Tuple[Tuple[float, float], bool]:
+    """Attempts to scan for roots and bracket roots of a function where the function goes from negative to positive.
 
     Parameters
     ----------
-    f
-    lower_bound
-    upper_bound
-    resolution
+    f : Callable
+        A function that accepts only one argument. Use lambdas if it has args.
+    lower_bound : float
+        The lower bound of the scan.
+    upper_bound : float
+        The upper bound of the scan.
+    resolution : int
+        The number of points in the scanning interval.
 
     Returns
     -------
+    bracket : Tuple of floats
 
+    bracket_found : bool
+        If a valid bracket was found.
     """
     x = np.linspace(lower_bound, upper_bound, resolution)
     y = f(x)
@@ -545,8 +571,12 @@ def scan_and_bracket(f: Callable, lower_bound: float, upper_bound: float,
 
     # The 0.5 thresholding is mostly arbitrary. A 0 would work just fine
     y_neg2pos_change = np.argwhere(np.where(y_sign_change > 0.5, 1, 0))
+
+    # If a bracket has been found, send bracket limits and a bracket-found boolean.
     if y_neg2pos_change.shape[0] > 0:
         root_position = y_neg2pos_change[0]
-        return x[root_position], x[root_position + 1], True
+        return (x[root_position], x[root_position + 1]), True
+
+    # In case a bracket is not found, send in dummy bracket limits, and the bool.
     else:
-        return 0.0, 0.0, False
+        return (0.0, 0.0), False
