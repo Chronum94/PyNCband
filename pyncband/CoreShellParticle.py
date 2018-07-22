@@ -178,8 +178,7 @@ class CoreShellParticle:
     # noinspection PyUnboundLocalVariable,PyUnboundLocalVariable
     def calculate_s1_energies(self,
                               bounds: Tuple[float, float] = (),
-                              resolution: int = None,
-                              in_ev: bool = True) -> Tuple[float, float]:
+                              resolution: int = None,) -> np.ndarray:
         """Calculates eigenenergies of the S1 exciton state in eV.
 
         Parameters
@@ -189,8 +188,6 @@ class CoreShellParticle:
         resolution : int
             The number of points to use when scanning and bracketing.
 
-        in_ev : bool
-            If False, returns energies in Joules.
         Returns
         -------
         s1_energies : 2-tuple of float, eV or Joules
@@ -221,7 +218,7 @@ class CoreShellParticle:
             return electron_eigenvalue_residual(x, self)
 
         while not electron_bracket_found and current_electron_bracketing_attempt <= self.MAX_ENERGY_BRACKETING_ATTEMPTS:
-            bracket_low, bracket_high, electron_bracket_found = scan_and_bracket(
+            (bracket_low, bracket_high), electron_bracket_found = scan_and_bracket(
                 eer, lower_bound_e, upper_bound_e, resolution)
             lower_bound_e += self.DEFAULT_ELECTRON_ENERGY_SEARCH_RANGE_EV
             upper_bound_e += self.DEFAULT_ELECTRON_ENERGY_SEARCH_RANGE_EV
@@ -249,7 +246,7 @@ class CoreShellParticle:
             return hole_eigenvalue_residual(x, self)
 
         while not hole_bracket_found and current_hole_bracketing_attempt <= self.MAX_ENERGY_BRACKETING_ATTEMPTS:
-            bracket_low, bracket_high, hole_bracket_found = scan_and_bracket(
+            (bracket_low, bracket_high), hole_bracket_found = scan_and_bracket(
                 her, lower_bound_h, upper_bound_h, resolution)
             lower_bound_h += self.DEFAULT_HOLE_ENERGY_SEARCH_RANGE_EV
             upper_bound_h += self.DEFAULT_HOLE_ENERGY_SEARCH_RANGE_EV
@@ -269,7 +266,7 @@ class CoreShellParticle:
         self.energies_valid = True
 
 
-        return self.s1_e, self.s1_h
+        return np.array([self.s1_e, self.s1_h])
 
     def plot_electron_wavefunction(self):
         core_wavenumber, shell_wavenumber, _, _ = self.calculate_wavenumbers(
@@ -454,7 +451,7 @@ class CoreShellParticle:
                     #     "Lowering localization search limit. This goes against the paper."
                     # )
                     # TODO: This lower bound does not agree with the paper. Need to figure this garbage out.
-                    lower_bound, upper_bound, bracket_found = scan_and_bracket(
+                    (lower_bound, upper_bound), bracket_found = scan_and_bracket(
                         min_core_loc_from_shell, 0, upper_bound, 10000)
                     # print('FALLBACKLOW:', lower_bound)
                     # print('FALLBACKHIGH:', upper_bound)
@@ -591,7 +588,7 @@ class CoreShellParticle:
                     #     "Lowering localization search limit. This goes against the paper."
                     # )
                     # TODO: This lower bound does not agree with the paper. Need to figure this garbage out.
-                    lower_bound, upper_bound, bracket_found = scan_and_bracket(
+                    (lower_bound, upper_bound), bracket_found = scan_and_bracket(
                         min_core_loc_from_shell, 0, upper_bound, resolution)
                     # print('FALLBACKLOW:', lower_bound)
                     # print('FALLBACKHIGH:', upper_bound)

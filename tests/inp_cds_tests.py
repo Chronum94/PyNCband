@@ -52,7 +52,7 @@ def main():
         #     end="\t",
         # )
         print(
-            "{:0.2f}\t{:0.2f}\t{:0.2f}\t{:0.2f}\t{:0.2f}\t{:0.2f}({:0.2f})".
+            "{:0.2f}\t{:0.2f}\t{:0.2f}\t{:0.2f}\t{:0.2f}\t\t{:0.2f}({:0.2f})".
             format(
                 csnc.bandgap,
                 energies[0],

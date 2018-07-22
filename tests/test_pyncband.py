@@ -105,4 +105,20 @@ def test_adaptive_energy_bracketing_for_high_energies():
     assert np.isclose(energies[0], energies[1])
 
 
+def test_wavenumbers_are_order_unity():
+    a = Material(1.0, 0.0, 1.0, 1.0, 1.0)
+    b = Material(1.0, -0.5, 1.0, 1.0, 1.0)  # Lower band edges.
+    csnc1 = CoreShellParticle(a, b, 1.0, 1.0)  # Type 2 CSNC. h/e structure.
+    wavenumbers = csnc1.calculate_wavenumbers()
+    assert np.all(np.logical_and(1e-2 < abs(wavenumbers), abs(wavenumbers) < 10))
+
+
+def test_energies_are_order_unity():
+    a = Material(1.0, 0.0, 1.0, 1.0, 1.0)
+    b = Material(1.0, -0.5, 1.0, 1.0, 1.0)  # Lower band edges.
+    csnc1 = CoreShellParticle(a, b, 1.0, 1.0)  # Type 2 CSNC. h/e structure.
+    energies = csnc1.calculate_s1_energies()
+    assert np.all(np.logical_and(1e-2 < energies, energies < 10))
+
+
 test_adaptive_energy_bracketing_for_high_energies()
