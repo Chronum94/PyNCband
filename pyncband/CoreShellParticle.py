@@ -666,10 +666,11 @@ class CoreShellParticle:
             r, dr = np.linspace(1e-13, self.radius, 128, retstep=True)
             r1, r2 = np.meshgrid(r, r)
             coulomb_integrand = np.vectorize(coulomb_integrand)
+            max_core_sample = r[np.argwhere(r < self.core_width)[-1]]
             zz = coulomb_integrand(r1, r2)
-            plt.imshow(zz, extent=[0, self.radius, self.radius, 0])
-            plt.hlines(self.core_width, xmin=0, xmax=self.radius, linestyles="dotted", label="H-shell")
-            plt.vlines(self.core_width, ymin=0, ymax=self.radius, linestyles="dotted", label="V-core")
+            plt.imshow(zz, extent=[0, self.radius, self.radius, 0], cmap='Blues')
+            plt.hlines(max_core_sample, xmin=0, xmax=self.radius, linestyles="dotted", label="H-shell", linewidth=0.5)
+            plt.vlines(max_core_sample, ymin=0, ymax=self.radius, linestyles="dotted", label="V-core", linewidth=0.5)
             plt.colorbar()
             plt.xlabel("Electron($r_a$) coordinate")
             plt.ylabel("Hole($r_b$) coordinate")
@@ -780,13 +781,15 @@ class CoreShellParticle:
         #     * norm_h
         # )
         if plot_integrand:
-            r, dr = np.linspace(1e-13, self.radius, 128, retstep=True)
+            r, dr = np.linspace(1e-13, self.radius, 256, retstep=True)
+            max_core_sample = r[np.argwhere(r < self.core_width)[-1]]
             r1, r2 = np.meshgrid(r, r)
             polarization_integrand = np.vectorize(polarization_integrand)
             zz = polarization_integrand(r1, r2)
-            plt.imshow(zz, extent=[0, self.radius, self.radius, 0])
-            plt.hlines(self.core_width, xmin=0, xmax=self.radius, linestyles="dotted", label="H-shell")
-            plt.vlines(self.core_width, ymin=0, ymax=self.radius, linestyles="dotted", label="V-core")
+            plt.imshow(zz, extent=[0, self.radius, self.radius, 0], cmap='Blues')
+            plt.hlines(max_core_sample, xmin=0, xmax=self.radius, linestyles="dotted", label="H-shell", linewidth=0.5)
+            plt.vlines(max_core_sample, ymin=0, ymax=self.radius, linestyles="dotted", label="V-core", linewidth=0.5)
+
             plt.colorbar()
             plt.xlabel("Electron($r_a$) coordinate")
             plt.ylabel("Hole($r_b$) coordinate")
