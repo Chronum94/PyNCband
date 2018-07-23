@@ -420,10 +420,11 @@ class CoreShellParticle:
                 # plt.show()
                 # This is the fallback for the case of where the sign doesn't change, and we have to drop the lower
                 # limit to 0.
+                print(lower_bound, upper_bound, min_core_loc_from_shell(lower_bound))
                 if min_core_loc_from_shell(lower_bound) * min_core_loc_from_shell(upper_bound) > 0:  # No sign change.
-                    plt.plot(min_core_loc_from_shell(np.linspace(lower_bound, upper_bound, 1000)))
-                    plt.title("From 0")
-                    plt.show()
+                    # plt.plot(min_core_loc_from_shell(np.linspace(lower_bound, upper_bound, 1000)))
+                    # plt.title("From 0")
+                    # plt.show()
 
                     # warn(
                     #     "Lowering localization search limit. This goes against the paper."
@@ -597,7 +598,7 @@ class CoreShellParticle:
 
         # Same for this.
         # SCALED TO ORDER UNITY.
-        q1 = (2 * self.smat.m_h * m_e * self.uh) ** 0.5 / hbar_ev
+        q1 = (2 * self.smat.m_h * m_e * self.uh) ** 0.5 / hbar_ev * wavenumber_nm_from_energy_ev
 
         # print('k1', k1, 'x1', x1)
         def min_shell_loc_from_core(h: float) -> float:
