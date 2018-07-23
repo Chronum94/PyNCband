@@ -261,7 +261,7 @@ class CoreShellParticle:
         core_wavenumber, shell_wavenumber, _, _ = self.calculate_wavenumbers()
         x = np.linspace(0, self.radius, 1000)
         y = wavefunction(x, core_wavenumber, shell_wavenumber, self.core_width, self.shell_width)
-        return y / np.max(np.abs(y))
+        return x, y / np.max(np.abs(y))
 
     def plot_hole_wavefunction(self):
         """
@@ -273,7 +273,7 @@ class CoreShellParticle:
         _, _, core_wavenumber, shell_wavenumber = self.calculate_wavenumbers()
         x = np.linspace(0, self.radius, 1000)
         y = wavefunction(x, core_wavenumber, shell_wavenumber, self.core_width, self.shell_width)
-        return y / np.max(np.abs(y))
+        return x, y / np.max(np.abs(y))
 
     def plot_potential_profile(self):
         """Plots one half of the spherically symmetric potential well of the quantum dot.
@@ -406,25 +406,9 @@ class CoreShellParticle:
                 return shell_width + m * r / (1 - m + 1 / tanxdivx(k1 * r))
 
             if type(x1) == float:
-                # print('x1:', x1, 'k1:', k1)
-                # print('m-ratio:', m)
-
-                # print('FHigh-:', min_core_loc_from_shell(np.pi / k1 - 1e-4))
                 lower_bound, upper_bound = (x1 / k1 + 1e-8, np.pi / k1 - 1e-8)
-                # print('Low:', lower_bound)
-                # print('High:', upper_bound)
-                # print("FLow:", min_core_loc_from_shell(lower_bound))
-                # print("FHigh:", min_core_loc_from_shell(upper_bound))
-                # plt.plot(min_core_loc_from_shell(np.linspace(lower_bound, upper_bound, 1000)))
-                # plt.title("From x/pi")
-                # plt.show()
-                # This is the fallback for the case of where the sign doesn't change, and we have to drop the lower
-                # limit to 0.
-                print(lower_bound, upper_bound, min_core_loc_from_shell(lower_bound))
+
                 if min_core_loc_from_shell(lower_bound) * min_core_loc_from_shell(upper_bound) > 0:  # No sign change.
-                    # plt.plot(min_core_loc_from_shell(np.linspace(lower_bound, upper_bound, 1000)))
-                    # plt.title("From 0")
-                    # plt.show()
 
                     # warn(
                     #     "Lowering localization search limit. This goes against the paper."
@@ -433,12 +417,6 @@ class CoreShellParticle:
                     (lower_bound, upper_bound), bracket_found = scan_and_bracket(
                         min_core_loc_from_shell, 0, upper_bound, 10000
                     )
-                    # print('FALLBACKLOW:', lower_bound)
-                    # print('FALLBACKHIGH:', upper_bound)
-                    # print("FBFLOW:", min_core_loc_from_shell(lower_bound))
-                    # print('FLow+:', min_core_loc_from_shell(x1 / k1 + 1e-4))
-                    # print("FBFHIGH:", min_core_loc_from_shell(upper_bound))
-
                 result = brentq(min_core_loc_from_shell, lower_bound, upper_bound)
 
                 # Returning with proper scaling.
@@ -463,31 +441,19 @@ class CoreShellParticle:
         if self.e_h:
             raise LocalizationNotPossibleError("Electrons will not localize in the shell in e/h structures.")
 
-        # EVERYTHING IN THIS FUNCTION HAS BEEN SCALED WITH n_ = 1e-9. There are almost certainly better, more adaptive
-        # ways to scale. But for now, the nano- is our lord and saviour.
+
         if core_width is None:
-            # Scaling to order unity.
+
             core_width = self.core_width
 
-        # This could use a cached value. This does not change.
-        # In the Piryatinski 2007 paper, this is used to set a lower bound on the core radius search bracket.
-        # However, I've noticed that this lower bracket often fails. Need to look more into why.
 
-        # Same for this.
-        # SCALED TO ORDER UNITY.
         q1 = (2 * self.smat.m_e * m_e * self.ue) ** 0.5 / hbar_ev * wavenumber_nm_from_energy_ev
 
         # print('k1', k1, 'x1', x1)
         def min_shell_loc_from_core(h: float) -> float:
             return core_width + np.tan(q1 * h) * q1
 
-            # print('FALLBACKLOW:', lower_bound)
-            # print('FALLBACKHIGH:', upper_bound)
-            # print("FBFLOW:", min_core_loc_from_shell(lower_bound))
-            # print('FLow+:', min_core_loc_from_shell(x1 / k1 + 1e-4))
-            # print("FBFHIGH:", min_core_loc_from_shell(upper_bound))
-
-        result = brentq(min_shell_loc_from_core, np.pi / (2 * q1) + 1e-13, np.pi / q1 - 1e-13)
+        result = brentq(min_shell_loc_from_core, np.pi / (2 * q1) + 1e-8, np.pi / q1 - 1e-8)
         return result
 
     def localization_hole_core(self, shell_width: float = None, resolution=1000) -> float:
@@ -570,7 +536,7 @@ class CoreShellParticle:
                 raise ValueError
 
     def localization_hole_shell(self, core_width: float = None) -> float:
-        """Minimum core width for localization of electron for a given shell width.
+        """Minimum core width for localization of hole for a given shell width.
 
         Parameters
         ----------
@@ -584,31 +550,20 @@ class CoreShellParticle:
 
         """
         if self.h_e:
-            raise LocalizationNotPossibleError("Holes will not localize in the shell in e/h structures.")
+            raise LocalizationNotPossibleError("Holes will not localize in the shell in h/e structures.")
 
-        # EVERYTHING IN THIS FUNCTION HAS BEEN SCALED WITH n_ = 1e-9. There are almost certainly better, more adaptive
-        # ways to scale. But for now, the nano- is our lord and saviour.
         if core_width is None:
-            # Scaling to order unity.
             core_width = self.core_width
 
         # This could use a cached value. This does not change.
         # In the Piryatinski 2007 paper, this is used to set a lower bound on the core radius search bracket.
         # However, I've noticed that this lower bracket often fails. Need to look more into why.
 
-        # Same for this.
-        # SCALED TO ORDER UNITY.
-        q1 = (2 * self.smat.m_h * m_e * self.uh) ** 0.5 / hbar_ev * wavenumber_nm_from_energy_ev
+        q1 = wavenumber_from_energy(self.uh, self.smat.m_h)
+        # print("q1 is:", q1)
 
-        # print('k1', k1, 'x1', x1)
         def min_shell_loc_from_core(h: float) -> float:
             return core_width + np.tan(q1 * h) * q1
-
-            # print('FALLBACKLOW:', lower_bound)
-            # print('FALLBACKHIGH:', upper_bound)
-            # print("FBFLOW:", min_core_loc_from_shell(lower_bound))
-            # print('FLow+:', min_core_loc_from_shell(x1 / k1 + 1e-4))
-            # print("FBFHIGH:", min_core_loc_from_shell(upper_bound))
 
         result = brentq(min_shell_loc_from_core, np.pi / (2 * q1) + 1e-8, np.pi / q1 - 1e-8)
         return result

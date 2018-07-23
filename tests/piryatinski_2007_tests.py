@@ -59,24 +59,18 @@ def localization_in_core_eh(shell_width):
 
 def localization_in_shell_eh(core_width):
     return cseh.localization_hole_shell(core_width)
+
+vec_localization_in_core_eh = np.vectorize(localization_in_core_eh)
+vec_localization_in_shell_eh = np.vectorize(localization_in_shell_eh)
 # =====================================================================
-shell_radii_for_localization = np.zeros_like(core_radii)
-core_radii_for_localization = np.zeros_like(shell_radii)
+core_radii_for_image = np.linspace(0.5, 4, 20)
+shell_radii_for_image = np.linspace(0.2, 2, 20)
+shell_radii_for_localization = vec_localization_in_shell_eh(core_radii_for_image)
+shell_radii_asymptote = cseh.localization_hole_shell(10000)
+core_radii_for_localization = vec_localization_in_core_eh(shell_radii_for_image)
+core_radii_asymptote = cseh.localization_electron_core(10000)
 
-for i, x in enumerate(list(core_radii)):
-    shell_radii_for_localization[i] = localization_in_shell_eh(x)
-
-for i, x in enumerate(list(shell_radii)):
-    print(i, x)
-    core_radii_for_localization[i] = localization_in_core_eh(x)
-
-
-
-
-
-# shell_radii_for_localization = vec_localization_in_shell_eh(core_radii)
-# core_radii_for_localization = vec_localization_in_core_eh(shell_radii)
-plt.plot(shell_radii_for_localization, core_radii, shell_radii, core_radii_for_localization)
-plt.xlim([0.1, 10])
-plt.ylim([0.1, 10])
-
+plt.plot(core_radii_for_image, shell_radii_for_localization, core_radii_for_localization, shell_radii_for_image)
+plt.xlim(0.5, 4)
+plt.ylim(0.2, 2)
+plt.show()

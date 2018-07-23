@@ -11,7 +11,7 @@ from numba import jit, float64, complex128
 from numpy.lib.scimath import sqrt as csqrt
 from scipy.constants import epsilon_0 as eps0
 
-from .scaling import n_, hbar_ev, m_e, wavenumber_nm_from_energy_ev
+from .scaling import n_, hbar_ev, m_e, wavenumber_nm_from_energy_ev, e
 
 if TYPE_CHECKING:
     from .CoreShellParticle import CoreShellParticle
