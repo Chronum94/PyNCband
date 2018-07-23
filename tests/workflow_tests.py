@@ -38,8 +38,7 @@ with w.catch_warnings() as wfil:
         print("EG", energies)
         print("CE:", coulomb_energy)
         print("PE:", polarization_energy)
-        print(CdS_AlSb.analytical_overlap_integral(),
-              CdS_AlSb.numerical_overlap_integral())
+        print(CdS_AlSb.analytical_overlap_integral(), CdS_AlSb.numerical_overlap_integral())
         # print("BG:", CdS_AlSb.bandgap)
         # print("ExcEnergy:", CdS_AlSb.bandgap + np.sum(energies) + coulomb_energy[0] + polarization_energy[0])
         # print(AlSb_CdS.localization_electron_core())

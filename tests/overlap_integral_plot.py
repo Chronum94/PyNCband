@@ -1,5 +1,5 @@
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
 
 from pyncband import Material, CoreShellParticle
 
@@ -17,8 +17,7 @@ def overlap_integral(core_width, shell_width):
     # col_nrg = csnc.coulomb_screening_energy()
     # pol_nrg = csnc.interface_polarization_energy()
 
-    return csnc.numerical_overlap_integral(
-    )  # bg + np.sum(state_nrg) + col_nrg[0] + pol_nrg[0]
+    return csnc.numerical_overlap_integral()  # bg + np.sum(state_nrg) + col_nrg[0] + pol_nrg[0]
 
 
 voverlap_integral = np.vectorize(overlap_integral)
@@ -27,7 +26,7 @@ xx, yy = np.meshgrid(x, x)
 zz = voverlap_integral(xx, yy)
 
 levels = np.linspace(np.min(zz), np.max(zz), 20)
-plt.contourf(zz, cmap='jet', levels=levels)
+plt.contourf(zz, cmap="jet", levels=levels)
 
 plt.colorbar()
 plt.show()
