@@ -368,7 +368,7 @@ class CoreShellParticle:
         """Prints the wavefunction at 0."""
         print(_wavefunction(0, self.calculate_wavenumbers()[0], self.core_width))
 
-    def localization_electron_core(self, shell_width: float = None) -> float:
+    def localization_electron_core(self, shell_width: float = None, asymp: bool = False) -> float:
         """Minimum core width for localization of electron for a given shell width.
 
         Parameters
@@ -401,6 +401,8 @@ class CoreShellParticle:
 
             k1 = (2 * self.cmat.m_e * m_e * self.ue) ** 0.5 / hbar_ev * wavenumber_nm_from_energy_ev
 
+            if asymp:
+                return x1 / k1
             # print('k1', k1, 'x1', x1)
             def min_core_loc_from_shell(r: float) -> float:
                 return shell_width + m * r / (1 - m + 1 / tanxdivx(k1 * r))
@@ -424,7 +426,7 @@ class CoreShellParticle:
             else:
                 raise ValueError
 
-    def localization_electron_shell(self, core_width: float = None) -> float:
+    def localization_electron_shell(self, core_width: float = None, asymp: bool = False) -> float:
         """Minimum shell width for localization of electron for a given core width.
 
         Parameters
@@ -449,6 +451,8 @@ class CoreShellParticle:
 
         q1 = (2 * self.smat.m_e * m_e * self.ue) ** 0.5 / hbar_ev * wavenumber_nm_from_energy_ev
 
+        if asymp:
+            return np.pi / (2 * q1)
         # print('k1', k1, 'x1', x1)
         def min_shell_loc_from_core(h: float) -> float:
             return core_width + np.tan(q1 * h) * q1
@@ -456,7 +460,7 @@ class CoreShellParticle:
         result = brentq(min_shell_loc_from_core, np.pi / (2 * q1) + 1e-8, np.pi / q1 - 1e-8)
         return result
 
-    def localization_hole_core(self, shell_width: float = None, resolution=1000) -> float:
+    def localization_hole_core(self, shell_width: float = None, resolution=1000, asymp: bool = False) -> float:
         """Minimum core width for localization of holes for a given shell width.
 
         Parameters
@@ -488,12 +492,14 @@ class CoreShellParticle:
             # This could use a cached value. This does not change.
             # In the Piryatinski 2007 paper, this is used to set a lower bound on the core radius search bracket.
             # However, I've noticed that this lower bracket often fails. Need to look more into why.
-            x1 = brentq(_x_residual_function, -np.pi + 1e-10, 0, args=(self.cmat.m_h, self.smat.m_h))
+            x1 = brentq(_x_residual_function, 0, np.pi - 1e-10, args=(self.cmat.m_h, self.smat.m_h))
 
             # Same for this.
             # SCALED TO ORDER UNITY.
             k1 = (2 * self.cmat.m_h * m_e * self.uh) ** 0.5 / hbar_ev * wavenumber_nm_from_energy_ev
 
+            if asymp:
+                return x1 / k1
             # print('k1', k1, 'x1', x1)
             def min_core_loc_from_shell(r: float) -> float:
                 return shell_width + m * r / (1 - m + 1 / tanxdivx(k1 * r))
@@ -535,7 +541,7 @@ class CoreShellParticle:
             else:
                 raise ValueError
 
-    def localization_hole_shell(self, core_width: float = None) -> float:
+    def localization_hole_shell(self, core_width: float = None, asymp: bool=False) -> float:
         """Minimum core width for localization of hole for a given shell width.
 
         Parameters
@@ -561,6 +567,8 @@ class CoreShellParticle:
 
         q1 = wavenumber_from_energy(self.uh, self.smat.m_h)
         # print("q1 is:", q1)
+        if asymp:
+            return np.pi / (2 * q1)
 
         def min_shell_loc_from_core(h: float) -> float:
             return core_width + np.tan(q1 * h) * q1
