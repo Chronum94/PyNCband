@@ -194,15 +194,17 @@ def test_asymptotic_core_localization():
     b = Material(1.0, -0.5, 1.0, 1.0, 1.0)  # Lower band edges.
     csnc1 = CoreShellParticle(a, b, 1.0, 1.0)  # Type 2 CSNC. h/e structure.
     csnc2 = CoreShellParticle(b, a, 1.0, 1.0)  # Type 2 CSNC. e/h structure.
-    assert np.isclose(csnc1.localization_hole_core(50000), csnc1. localization_hole_core(asymp=True))
+    assert np.isclose(csnc1.localization_hole_core(50000), csnc1.localization_hole_core(asymp=True))
     assert np.isclose(csnc2.localization_electron_core(50000), csnc2.localization_electron_core(asymp=True))
+
 
 def test_asymptotic_shell_localization():
     a = Material(1.0, 0.0, 1.0, 1.0, 1.0)
     b = Material(1.0, -0.5, 1.0, 1.0, 1.0)  # Lower band edges.
     csnc1 = CoreShellParticle(a, b, 1.0, 1.0)  # Type 2 CSNC. h/e structure.
     csnc2 = CoreShellParticle(b, a, 1.0, 1.0)  # Type 2 CSNC. e/h structure.
-    assert np.isclose(csnc1.localization_electron_shell(1e6), csnc1. localization_electron_shell(asymp=True))
+    assert np.isclose(csnc1.localization_electron_shell(1e6), csnc1.localization_electron_shell(asymp=True))
     assert np.isclose(csnc2.localization_hole_shell(1e6), csnc2.localization_hole_shell(asymp=True))
+
 
 test_asymptotic_core_localization()

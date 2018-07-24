@@ -412,9 +412,7 @@ class CoreShellParticle:
 
                 if min_core_loc_from_shell(lower_bound) * min_core_loc_from_shell(upper_bound) > 0:  # No sign change.
 
-                    # warn(
-                    #     "Lowering localization search limit. This goes against the paper."
-                    # )
+
                     # TODO: This lower bound does not agree with the paper. Need to figure this garbage out.
                     (lower_bound, upper_bound), bracket_found = scan_and_bracket(
                         min_core_loc_from_shell, 0, upper_bound, 10000
@@ -510,29 +508,17 @@ class CoreShellParticle:
 
                 # print('FHigh-:', min_core_loc_from_shell(np.pi / k1 - 1e-4))
                 lower_bound, upper_bound = (x1 / k1 + 1e-8, np.pi / k1 - 1e-8)
-                # print('Low:', lower_bound)
-                # print('High:', upper_bound)
-                # print("FLow:", min_core_loc_from_shell(lower_bound))
-                # print("FHigh:", min_core_loc_from_shell(upper_bound))
-                # plt.plot(min_core_loc_from_shell(np.linspace(lower_bound, upper_bound, 1000)))
 
                 # This is the fallback for the case of where the sign doesn't change, and we have to drop the lower
                 # limit to 0.
                 if min_core_loc_from_shell(lower_bound) * min_core_loc_from_shell(upper_bound) > 0:  # No sign change.
                     # plt.plot(min_core_loc_from_shell(np.linspace(lower_bound, upper_bound, 1000)))
                     # plt.show()
-                    # warn(
-                    #     "Lowering localization search limit. This goes against the paper."
-                    # )
+
                     # TODO: This lower bound does not agree with the paper. Need to figure this garbage out.
                     (lower_bound, upper_bound), bracket_found = scan_and_bracket(
                         min_core_loc_from_shell, 0, upper_bound, resolution
                     )
-                    # print('FALLBACKLOW:', lower_bound)
-                    # print('FALLBACKHIGH:', upper_bound)
-                    # print("FBFLOW:", min_core_loc_from_shell(lower_bound))
-                    # print('FLow+:', min_core_loc_from_shell(x1 / k1 + 1e-4))
-                    # print("FBFHIGH:", min_core_loc_from_shell(upper_bound))
 
                 result = brentq(min_core_loc_from_shell, lower_bound, upper_bound)
 
@@ -576,7 +562,7 @@ class CoreShellParticle:
         result = brentq(min_shell_loc_from_core, np.pi / (2 * q1) + 1e-8, np.pi / q1 - 1e-8)
         return result
 
-    def coulomb_screening_energy(self, relative_tolerance: float = 1e-5, plot_integrand: bool = False, cmap: str='coolwarm'):
+    def coulomb_screening_energy(self, relative_tolerance: float = 1e-5, plot_integrand = None, cmap: str = 'coolwarm'):
         """ Calculates the Coulomb screening energy. Somewhat slow.
 
         Parameters
@@ -584,7 +570,7 @@ class CoreShellParticle:
         relative_tolerance : float
             The relative tolerance for the Coulomb screening energy integral. Defaults to 1e-5.
 
-        plot_integrand : bool
+        plot_integrand :
 
         Returns
         -------
@@ -670,20 +656,21 @@ class CoreShellParticle:
         #     * norm_e
         #     * norm_h
         # )
-        if plot_integrand:
+        if plot_integrand is not None:
             r, dr = np.linspace(1e-13, self.radius, 128, retstep=True)
             r1, r2 = np.meshgrid(r, r)
             coulomb_integrand = np.vectorize(coulomb_integrand)
             max_core_sample = r[np.argwhere(r < self.core_width)[-1]]
             zz = coulomb_integrand(r1, r2)
-            plt.imshow(zz, extent=[0, self.radius, self.radius, 0], cmap=cmap)
-            plt.hlines(max_core_sample, xmin=0, xmax=self.radius, linestyles="dotted", label="H-shell", linewidth=0.5)
-            plt.vlines(max_core_sample, ymin=0, ymax=self.radius, linestyles="dotted", label="V-core", linewidth=0.5)
-            plt.colorbar()
-            plt.xlabel("Electron($r_a$) coordinate")
-            plt.ylabel("Hole($r_b$) coordinate")
-            plt.title("Coulomb integrand")
-            plt.show()
+            integrand_image = plot_integrand.imshow(zz, extent=[0, self.radius, self.radius, 0], cmap=cmap)
+            plot_integrand.hlines(max_core_sample, xmin=0, xmax=self.radius, linestyles="dotted", label="H-shell", linewidth=0.5)
+            plot_integrand.vlines(max_core_sample, ymin=0, ymax=self.radius, linestyles="dotted", label="V-core", linewidth=0.5)
+            # plt.colorbar()
+            plot_integrand.set_xlabel("Electron($r_a$) coordinate")
+            plot_integrand.set_ylabel("Hole($r_b$) coordinate")
+            # plt.title("Coulomb integrand")
+            # plt.show()
+            return sectioned_integral, integrand_image
         #
         #
         # !!! ALSO THIS. THIS IS A ROMBERG INTEGRAL TO SHOW US THAT THE PIECEWISE APPROACH IS CORRECT.
@@ -691,7 +678,7 @@ class CoreShellParticle:
         # print(whole_integral[0], sectioned_integral[0], trapzed)
         return sectioned_integral
 
-    def interface_polarization_energy(self, relative_tolerance: float = 1e-5, plot_integrand: bool = False, cmap: str='coolwarm'):
+    def interface_polarization_energy(self, relative_tolerance: float = 1e-5, plot_integrand = None, cmap: str = 'coolwarm'):
         """
 
         Parameters
@@ -789,20 +776,21 @@ class CoreShellParticle:
         #     * norm_h
         # )
         if plot_integrand:
-            r, dr = np.linspace(1e-13, self.radius, 256, retstep=True)
+            r, dr = np.linspace(1e-13, self.radius, 128, retstep=True)
             max_core_sample = r[np.argwhere(r < self.core_width)[-1]]
             r1, r2 = np.meshgrid(r, r)
             polarization_integrand = np.vectorize(polarization_integrand)
             zz = polarization_integrand(r1, r2)
-            plt.imshow(zz, extent=[0, self.radius, self.radius, 0], cmap=cmap)
-            plt.hlines(max_core_sample, xmin=0, xmax=self.radius, linestyles="dotted", label="H-shell", linewidth=0.5)
-            plt.vlines(max_core_sample, ymin=0, ymax=self.radius, linestyles="dotted", label="V-core", linewidth=0.5)
+            integrand_image = plot_integrand.imshow(zz, extent=[0, self.radius, self.radius, 0], cmap=cmap)
+            plot_integrand.hlines(max_core_sample, xmin=0, xmax=self.radius, linestyles="dotted", label="H-shell", linewidth=0.5)
+            plot_integrand.vlines(max_core_sample, ymin=0, ymax=self.radius, linestyles="dotted", label="V-core", linewidth=0.5)
 
-            plt.colorbar()
-            plt.xlabel("Electron($r_a$) coordinate")
-            plt.ylabel("Hole($r_b$) coordinate")
-            plt.title("Polarization integrand")
-            plt.show()
+            #plt.colorbar()
+            plot_integrand.set_xlabel("Electron($r_a$) coordinate")
+            plot_integrand.set_ylabel("Hole($r_b$) coordinate")
+            # plt.title("Polarization integrand")
+            # plt.show()
+            return sectioned_integral, integrand_image
 
         # trapzed = romb(romb(zz)) * dr * dr * norm_e * norm_h
         return sectioned_integral
