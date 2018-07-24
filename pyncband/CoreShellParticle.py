@@ -676,7 +676,7 @@ class CoreShellParticle:
             coulomb_integrand = np.vectorize(coulomb_integrand)
             max_core_sample = r[np.argwhere(r < self.core_width)[-1]]
             zz = coulomb_integrand(r1, r2)
-            plt.imshow(zz, extent=[0, self.radius, self.radius, 0], cmap='Blues')
+            plt.imshow(zz, extent=[0, self.radius, self.radius, 0], cmap='coolwarm')
             plt.hlines(max_core_sample, xmin=0, xmax=self.radius, linestyles="dotted", label="H-shell", linewidth=0.5)
             plt.vlines(max_core_sample, ymin=0, ymax=self.radius, linestyles="dotted", label="V-core", linewidth=0.5)
             plt.colorbar()
@@ -794,7 +794,7 @@ class CoreShellParticle:
             r1, r2 = np.meshgrid(r, r)
             polarization_integrand = np.vectorize(polarization_integrand)
             zz = polarization_integrand(r1, r2)
-            plt.imshow(zz, extent=[0, self.radius, self.radius, 0], cmap='Blues')
+            plt.imshow(zz, extent=[0, self.radius, self.radius, 0], cmap='coolwarm')
             plt.hlines(max_core_sample, xmin=0, xmax=self.radius, linestyles="dotted", label="H-shell", linewidth=0.5)
             plt.vlines(max_core_sample, ymin=0, ymax=self.radius, linestyles="dotted", label="V-core", linewidth=0.5)
 
