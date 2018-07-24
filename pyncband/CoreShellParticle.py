@@ -576,7 +576,7 @@ class CoreShellParticle:
         result = brentq(min_shell_loc_from_core, np.pi / (2 * q1) + 1e-8, np.pi / q1 - 1e-8)
         return result
 
-    def coulomb_screening_energy(self, relative_tolerance: float = 1e-5, plot_integrand: bool = False):
+    def coulomb_screening_energy(self, relative_tolerance: float = 1e-5, plot_integrand: bool = False, cmap: str='coolwarm'):
         """ Calculates the Coulomb screening energy. Somewhat slow.
 
         Parameters
@@ -676,7 +676,7 @@ class CoreShellParticle:
             coulomb_integrand = np.vectorize(coulomb_integrand)
             max_core_sample = r[np.argwhere(r < self.core_width)[-1]]
             zz = coulomb_integrand(r1, r2)
-            plt.imshow(zz, extent=[0, self.radius, self.radius, 0], cmap='coolwarm')
+            plt.imshow(zz, extent=[0, self.radius, self.radius, 0], cmap=cmap)
             plt.hlines(max_core_sample, xmin=0, xmax=self.radius, linestyles="dotted", label="H-shell", linewidth=0.5)
             plt.vlines(max_core_sample, ymin=0, ymax=self.radius, linestyles="dotted", label="V-core", linewidth=0.5)
             plt.colorbar()
@@ -691,7 +691,7 @@ class CoreShellParticle:
         # print(whole_integral[0], sectioned_integral[0], trapzed)
         return sectioned_integral
 
-    def interface_polarization_energy(self, relative_tolerance: float = 1e-5, plot_integrand: bool = False):
+    def interface_polarization_energy(self, relative_tolerance: float = 1e-5, plot_integrand: bool = False, cmap: str='coolwarm'):
         """
 
         Parameters
@@ -794,7 +794,7 @@ class CoreShellParticle:
             r1, r2 = np.meshgrid(r, r)
             polarization_integrand = np.vectorize(polarization_integrand)
             zz = polarization_integrand(r1, r2)
-            plt.imshow(zz, extent=[0, self.radius, self.radius, 0], cmap='coolwarm')
+            plt.imshow(zz, extent=[0, self.radius, self.radius, 0], cmap=cmap)
             plt.hlines(max_core_sample, xmin=0, xmax=self.radius, linestyles="dotted", label="H-shell", linewidth=0.5)
             plt.vlines(max_core_sample, ymin=0, ymax=self.radius, linestyles="dotted", label="V-core", linewidth=0.5)
 
