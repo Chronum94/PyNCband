@@ -126,7 +126,7 @@ class CoreShellParticle:
         Returns
         -------
         wavenumbers : [float, float, float, float] : Wavenumbers in 1 / nm.
-            Array of wavenumbers
+            Array of wavenumbers [electron-core, electron-shell, hole-core, hole-shell]
 
         References
         ----------
@@ -615,6 +615,7 @@ class CoreShellParticle:
         )
 
         # r1 > R, r2 < R
+
         integral_region_two = np.array(
             dblquad(
                 coulomb_integrand,
