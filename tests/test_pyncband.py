@@ -207,12 +207,14 @@ def test_asymptotic_shell_localization():
 
 
 def test_core_localization_consistency_with_paper():
-    mass_ratio = np.linspace(0.1, 2, 10)
+    mass_ratio = np.linspace(0.1, 10, 10)
 
     for m in mass_ratio:
         a = Material(1.0, 0.0, m, m, 1.0)
         b = Material(1.0, -0.5, 1.0, 1.0, 1.0)  # Lower band edges.
         csnc1 = CoreShellParticle(a, b, 1.0, 1.0)  # Type 2 CSNC. h/e structure.
-        csnc1.localization_hole_core()
+        csnc2 = CoreShellParticle(b, a, 1.0, 1.0)  # Type 2 CSNC. h/e structure.
+        print(csnc1.localization_hole_core())
+        print(csnc2.localization_electron_core())
 
 test_core_localization_consistency_with_paper()

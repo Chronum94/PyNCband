@@ -406,16 +406,16 @@ class CoreShellParticle:
                 return x1 / k1
             # print('k1', k1, 'x1', x1)
             def min_core_loc_from_shell(r: float) -> float:
-                return shell_width + m * r / (1 - m + 1 / tanxdivx(k1 * r))
+                return shell_width + m * r / ( - 1 + m + 1 / tanxdivx(k1 * r))
 
             if type(x1) == float:
                 lower_bound, upper_bound = (x1 / k1 + 1e-8, np.pi / k1 - 1e-8)
 
                 if min_core_loc_from_shell(lower_bound) * min_core_loc_from_shell(upper_bound) > 0:  # No sign change.
 
-                    # warn(
-                    #     "Lowering localization search limit. This goes against the paper."
-                    # )
+                    warn(
+                        "Lowering localization search limit. This goes against the paper."
+                    )
                     # TODO: This lower bound does not agree with the paper. Need to figure this garbage out.
                     (lower_bound, upper_bound), bracket_found = scan_and_bracket(
                         min_core_loc_from_shell, 0, upper_bound, 10000
@@ -502,7 +502,7 @@ class CoreShellParticle:
                 return x1 / k1
             # print('k1', k1, 'x1', x1)
             def min_core_loc_from_shell(r: float) -> float:
-                return shell_width + mass_ratio_coreshell * r / (1 - mass_ratio_coreshell + 1 / tanxdivx(k1 * r))
+                return shell_width + mass_ratio_coreshell * r / (- 1 + mass_ratio_coreshell + 1 / tanxdivx(k1 * r))
 
             if type(x1) == float:
                 # print('x1:', x1, 'k1:', k1)

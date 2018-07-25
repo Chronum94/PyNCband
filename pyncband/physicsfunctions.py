@@ -423,9 +423,9 @@ def _x_residual_function(x: float, mass_in_core: float, mass_in_shell: float) ->
     """
     mass_ratio_shellcore = mass_in_shell / mass_in_core
     if abs(x) < 1e-8:
-        return mass_ratio_shellcore
+        return 1 / mass_ratio_shellcore
     else:
-        return 1 / _tanxdivx(x) + mass_ratio_shellcore - 1
+        return 1 / _tanxdivx(x) + 1 / mass_ratio_shellcore - 1
 
 
 def make_coulomb_screening_operator(coreshellparticle: "CoreShellParticle") -> Callable:
