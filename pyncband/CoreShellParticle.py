@@ -2,6 +2,7 @@
 order physics that we consider.
 
 """
+from warnings import warn
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -455,7 +456,7 @@ class CoreShellParticle:
             return np.pi / (2 * q1)
         # print('k1', k1, 'x1', x1)
         def min_shell_loc_from_core(h: float) -> float:
-            return core_width + np.tan(q1 * h) * q1
+            return core_width + np.tan(q1 * h) / q1
 
         result = brentq(min_shell_loc_from_core, np.pi / (2 * q1) + 1e-8, np.pi / q1 - 1e-8)
         return result
@@ -487,22 +488,21 @@ class CoreShellParticle:
             if shell_width is None:
                 shell_width = self.shell_width
 
-            m = self.cmat.m_h / self.smat.m_h
+            mass_ratio_coreshell = self.cmat.m_h / self.smat.m_h
 
             # This could use a cached value. This does not change.
             # In the Piryatinski 2007 paper, this is used to set a lower bound on the core radius search bracket.
             # However, I've noticed that this lower bracket often fails. Need to look more into why.
             x1 = brentq(_x_residual_function, 0, np.pi - 1e-10, args=(self.cmat.m_h, self.smat.m_h))
 
-            # Same for this.
-            # SCALED TO ORDER UNITY.
+
             k1 = (2 * self.cmat.m_h * m_e * self.uh) ** 0.5 / hbar_ev * wavenumber_nm_from_energy_ev
 
             if asymp:
                 return x1 / k1
             # print('k1', k1, 'x1', x1)
             def min_core_loc_from_shell(r: float) -> float:
-                return shell_width + m * r / (1 - m + 1 / tanxdivx(k1 * r))
+                return shell_width + mass_ratio_coreshell * r / (1 - mass_ratio_coreshell + 1 / tanxdivx(k1 * r))
 
             if type(x1) == float:
                 # print('x1:', x1, 'k1:', k1)
@@ -519,8 +519,10 @@ class CoreShellParticle:
                 # This is the fallback for the case of where the sign doesn't change, and we have to drop the lower
                 # limit to 0.
                 if min_core_loc_from_shell(lower_bound) * min_core_loc_from_shell(upper_bound) > 0:  # No sign change.
-                    # plt.plot(min_core_loc_from_shell(np.linspace(lower_bound, upper_bound, 1000)))
-                    # plt.show()
+                    warn("Pls.")
+                    print(self.cmat.m_e)
+                    plt.plot(np.linspace(lower_bound, upper_bound, 1000), min_core_loc_from_shell(np.linspace(lower_bound, upper_bound, 1000)))
+
                     # warn(
                     #     "Lowering localization search limit. This goes against the paper."
                     # )
@@ -528,6 +530,9 @@ class CoreShellParticle:
                     (lower_bound, upper_bound), bracket_found = scan_and_bracket(
                         min_core_loc_from_shell, 0, upper_bound, resolution
                     )
+                    plt.plot(np.linspace(lower_bound, upper_bound, 1000),
+                             min_core_loc_from_shell(np.linspace(lower_bound, upper_bound, 1000)))
+                    plt.show()
                     # print('FALLBACKLOW:', lower_bound)
                     # print('FALLBACKHIGH:', upper_bound)
                     # print("FBFLOW:", min_core_loc_from_shell(lower_bound))
@@ -571,7 +576,7 @@ class CoreShellParticle:
             return np.pi / (2 * q1)
 
         def min_shell_loc_from_core(h: float) -> float:
-            return core_width + np.tan(q1 * h) * q1
+            return core_width + np.tan(q1 * h) / q1
 
         result = brentq(min_shell_loc_from_core, np.pi / (2 * q1) + 1e-8, np.pi / q1 - 1e-8)
         return result

@@ -421,11 +421,11 @@ def _x_residual_function(x: float, mass_in_core: float, mass_in_shell: float) ->
     Nano Letters, 7(1), 108–115. https://doi.org/10.1021/nl0622404
 
     """
-    mass_ratio = mass_in_shell / mass_in_core
+    mass_ratio_shellcore = mass_in_shell / mass_in_core
     if abs(x) < 1e-8:
-        return mass_ratio
+        return mass_ratio_shellcore
     else:
-        return 1 / _tanxdivx(x) + mass_ratio - 1
+        return 1 / _tanxdivx(x) + mass_ratio_shellcore - 1
 
 
 def make_coulomb_screening_operator(coreshellparticle: "CoreShellParticle") -> Callable:
