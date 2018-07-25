@@ -57,8 +57,10 @@ shell_radii = np.linspace(0.2, 10, 10)
 def localization_in_core_eh(shell_width):
     return cseh.localization_electron_core(shell_width)
 
+
 def localization_in_shell_eh(core_width):
     return cseh.localization_hole_shell(core_width)
+
 
 vec_localization_in_core_eh = np.vectorize(localization_in_core_eh)
 vec_localization_in_shell_eh = np.vectorize(localization_in_shell_eh)
