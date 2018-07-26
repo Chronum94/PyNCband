@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name="pyncband",
-    version="0.7.0",
+    version="0.7.1",
     packages=["pyncband"],
     url="",
     license="MIT",

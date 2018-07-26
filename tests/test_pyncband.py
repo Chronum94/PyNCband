@@ -194,27 +194,32 @@ def test_asymptotic_core_localization():
     b = Material(1.0, -0.5, 1.0, 1.0, 1.0)  # Lower band edges.
     csnc1 = CoreShellParticle(a, b, 1.0, 1.0)  # Type 2 CSNC. h/e structure.
     csnc2 = CoreShellParticle(b, a, 1.0, 1.0)  # Type 2 CSNC. e/h structure.
-    assert np.isclose(csnc1.localization_hole_core(50000), csnc1. localization_hole_core(asymp=True))
+    assert np.isclose(csnc1.localization_hole_core(50000), csnc1.localization_hole_core(asymp=True))
     assert np.isclose(csnc2.localization_electron_core(50000), csnc2.localization_electron_core(asymp=True))
+
 
 def test_asymptotic_shell_localization():
     a = Material(1.0, 0.0, 1.0, 1.0, 1.0)
     b = Material(1.0, -0.5, 1.0, 1.0, 1.0)  # Lower band edges.
     csnc1 = CoreShellParticle(a, b, 1.0, 1.0)  # Type 2 CSNC. h/e structure.
     csnc2 = CoreShellParticle(b, a, 1.0, 1.0)  # Type 2 CSNC. e/h structure.
-    assert np.isclose(csnc1.localization_electron_shell(1e6), csnc1. localization_electron_shell(asymp=True))
+    assert np.isclose(csnc1.localization_electron_shell(1e6), csnc1.localization_electron_shell(asymp=True))
     assert np.isclose(csnc2.localization_hole_shell(1e6), csnc2.localization_hole_shell(asymp=True))
 
 
 def test_core_localization_consistency_with_paper():
-    mass_ratio = np.linspace(0.1, 10, 10)
+    mass_ratio = np.linspace(0.01, 100, 10)
 
     for m in mass_ratio:
         a = Material(1.0, 0.0, m, m, 1.0)
         b = Material(1.0, -0.5, 1.0, 1.0, 1.0)  # Lower band edges.
         csnc1 = CoreShellParticle(a, b, 1.0, 1.0)  # Type 2 CSNC. h/e structure.
         csnc2 = CoreShellParticle(b, a, 1.0, 1.0)  # Type 2 CSNC. h/e structure.
-        print(csnc1.localization_hole_core())
-        print(csnc2.localization_electron_core())
+
+        # This test doesn't really -test- anything, per se. It simply makes sure that a part of the code that will raise
+        # a warning is not accessed.
+        csnc1.localization_hole_core()
+        csnc2.localization_electron_core()
+
 
 test_core_localization_consistency_with_paper()

@@ -127,7 +127,6 @@ def _unnormalized_core_wavefunction(x: float, k: floatcomplex, core_width: float
 
     # The branch is for numerical stability near x = 0.
     if abs(x) < 1e-8:
-        # There is no speed penalty for **, so don't try the x * x approach.
         val = k / denom
     else:
         val = np.sin(k * x) / (x * denom)

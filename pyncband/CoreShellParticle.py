@@ -32,9 +32,12 @@ class CoreShellParticle:
         ----------
         core_material : Material
             A Material object representing the core material of the nanocrystal.
+
         shell_material : Material
             A Material object representing the shell material of the nanocrystal.
+
         core_width : float, nanometers
+
         shell_width : float, nanometers
 
         """
@@ -221,9 +224,8 @@ class CoreShellParticle:
                 "increaseing MAX_ENERGY_BRACKETING_ATTEMPTS or "
                 "DEFAULT_ELECTRON_ENERGY_SEARCH_RANGE_EV, or both."
             )
-        # print(current_electron_bracketing_attempt)
 
-        self.s1_e = brentq(electron_eigenvalue_residual, bracket_low, bracket_high, args=(self,))
+        self.s1_e = brentq(eer, bracket_low, bracket_high)
 
         # Hole eigenvalue residual.
         def her(x):
@@ -246,7 +248,7 @@ class CoreShellParticle:
             )
         # print(current_hole_bracketing_attempt)
 
-        self.s1_h = brentq(hole_eigenvalue_residual, bracket_low, bracket_high, args=(self,))
+        self.s1_h = brentq(her, bracket_low, bracket_high)
 
         self.energies_valid = True
 
@@ -289,7 +291,6 @@ class CoreShellParticle:
         lvbe, hvbe = sorted([self.cmat.vbe, self.smat.vbe])
         plt.vlines(self.core_width, ymin=lcbe, ymax=hcbe)
         plt.vlines(self.core_width, ymin=lvbe, ymax=hvbe)
-        # plt.vlines()
         plt.show()
 
     # This is current non-normalized.
@@ -317,10 +318,6 @@ class CoreShellParticle:
         # QDWavefunctionsAndIntegrals.wxmx
         core_integral = -((k_h - k_e) * np.sin(R * (k_h + k_e)) - (k_h + k_e) * np.sin(R * (k_h - k_e))) / core_denom
         shell_integral = -((q_h - q_e) * np.sin(H * (q_h + q_e)) - (q_h + q_e) * np.sin(H * (q_h - q_e))) / shell_denom
-        # if abs(core_denom) < 1e-2 or abs(shell_denom) < 1e-2:
-        #     print(core_denom, shell_denom)
-        #     print(R, H)
-        #     raise RuntimeWarning("TINY DENOM.")
         return abs(core_integral + shell_integral) ** 2 * norm_h * norm_e
 
     def numerical_overlap_integral(self):
@@ -338,7 +335,6 @@ class CoreShellParticle:
         Nano Letters, 7(1), 108–115. https://doi.org/10.1021/nl0622404
 
         """
-        # Scaling to 1 / nm.
         k_e, q_e, k_h, q_h = self.calculate_wavenumbers()
         norm_e, norm_h = self._normalization()
 
@@ -356,14 +352,7 @@ class CoreShellParticle:
 
         overlap_integral_real = quad(overlap_integrand_real, 0, self.radius)
         overlap_integral_imag = quad(overlap_integrand_imag, 0, self.radius)
-        # Return both the answer and order-of-magnitude of error.
-        # print(norm_e, norm_h)
-        return (
-            abs((overlap_integral_real[0] + 1j * overlap_integral_imag[0])) ** 2
-            * norm_e
-            * norm_h  # ,
-            # (overlap_integral_imag[1] + overlap_integral_real[1]) ** 2,
-        )
+        return abs((overlap_integral_real[0] + 1j * overlap_integral_imag[0])) ** 2 * norm_e * norm_h
 
     def print_e_wf_at_zero(self):
         """Prints the wavefunction at 0."""
@@ -377,6 +366,9 @@ class CoreShellParticle:
         shell_width : float, nanometers
             The shell width for which to calculate the core localization width. If no value is given, the coreshell's
             current shell width is used.
+
+        asymp: bool
+            If true, returns the asymptotic core radius for large shell thickness.
 
         Returns
         -------
@@ -393,39 +385,24 @@ class CoreShellParticle:
             if shell_width is None:
                 shell_width = self.shell_width
 
-            m = self.cmat.m_e / self.smat.m_e
+            mass_ratio_coreshell = self.cmat.m_e / self.smat.m_e
 
-            # This could use a cached value. This does not change.
-            # In the Piryatinski 2007 paper, this is used to set a lower bound on the core radius search bracket.
-            # However, I've noticed that this lower bracket often fails. Need to look more into why.
             x1 = brentq(_x_residual_function, 0, np.pi - 1e-8, args=(self.cmat.m_e, self.smat.m_e))
 
             k1 = (2 * self.cmat.m_e * m_e * self.ue) ** 0.5 / hbar_ev * wavenumber_nm_from_energy_ev
 
             if asymp:
                 return x1 / k1
-            # print('k1', k1, 'x1', x1)
+
             def min_core_loc_from_shell(r: float) -> float:
-                return shell_width + m * r / ( - 1 + m + 1 / tanxdivx(k1 * r))
+                # This is correct. This has been fixed from the paper.
+                return shell_width + mass_ratio_coreshell * r / (-1 + mass_ratio_coreshell + 1 / tanxdivx(k1 * r))
 
-            if type(x1) == float:
-                lower_bound, upper_bound = (x1 / k1 + 1e-8, np.pi / k1 - 1e-8)
+            lower_bound, upper_bound = (x1 / k1 + 1e-8, np.pi / k1 - 1e-8)
 
-                if min_core_loc_from_shell(lower_bound) * min_core_loc_from_shell(upper_bound) > 0:  # No sign change.
+            result = brentq(min_core_loc_from_shell, lower_bound, upper_bound)
 
-                    warn(
-                        "Lowering localization search limit. This goes against the paper."
-                    )
-                    # TODO: This lower bound does not agree with the paper. Need to figure this garbage out.
-                    (lower_bound, upper_bound), bracket_found = scan_and_bracket(
-                        min_core_loc_from_shell, 0, upper_bound, 10000
-                    )
-                result = brentq(min_core_loc_from_shell, lower_bound, upper_bound)
-
-                # Returning with proper scaling.
-                return result
-            else:
-                raise ValueError
+            return result
 
     def localization_electron_shell(self, core_width: float = None, asymp: bool = False) -> float:
         """Minimum shell width for localization of electron for a given core width.
@@ -436,6 +413,8 @@ class CoreShellParticle:
             The core width for which to calculate the shell localization width. If no value is given, the coreshell's
             current core width is used.
 
+        asymp : bool
+            If true, returns the asymptotic minimum core radius for electron localization, for large shell thicknesses.
         Returns
         -------
         float, nanometers. : The minimum shell localization radius.
@@ -444,11 +423,9 @@ class CoreShellParticle:
         if self.e_h:
             raise LocalizationNotPossibleError("Electrons will not localize in the shell in e/h structures.")
 
-
         if core_width is None:
 
             core_width = self.core_width
-
 
         q1 = (2 * self.smat.m_e * m_e * self.ue) ** 0.5 / hbar_ev * wavenumber_nm_from_energy_ev
 
@@ -470,6 +447,7 @@ class CoreShellParticle:
             The shell width for which to calculate the core localization width. If no value is given, the coreshell's
             current shell width is used.
 
+        asymp : bool
         resolution : int
             The resolution with which to look for the roots of the localization equation.
 
@@ -490,63 +468,23 @@ class CoreShellParticle:
 
             mass_ratio_coreshell = self.cmat.m_h / self.smat.m_h
 
-            # This could use a cached value. This does not change.
-            # In the Piryatinski 2007 paper, this is used to set a lower bound on the core radius search bracket.
-            # However, I've noticed that this lower bracket often fails. Need to look more into why.
             x1 = brentq(_x_residual_function, 0, np.pi - 1e-10, args=(self.cmat.m_h, self.smat.m_h))
-
 
             k1 = (2 * self.cmat.m_h * m_e * self.uh) ** 0.5 / hbar_ev * wavenumber_nm_from_energy_ev
 
             if asymp:
                 return x1 / k1
-            # print('k1', k1, 'x1', x1)
+
             def min_core_loc_from_shell(r: float) -> float:
-                return shell_width + mass_ratio_coreshell * r / (- 1 + mass_ratio_coreshell + 1 / tanxdivx(k1 * r))
+                # Fixed from the paper.
+                return shell_width + mass_ratio_coreshell * r / (-1 + mass_ratio_coreshell + 1 / tanxdivx(k1 * r))
 
-            if type(x1) == float:
-                # print('x1:', x1, 'k1:', k1)
-                # print('m-ratio:', m)
+            lower_bound, upper_bound = (x1 / k1 + 1e-8, np.pi / k1 - 1e-8)
+            result = brentq(min_core_loc_from_shell, lower_bound, upper_bound)
 
-                # print('FHigh-:', min_core_loc_from_shell(np.pi / k1 - 1e-4))
-                lower_bound, upper_bound = (x1 / k1 + 1e-8, np.pi / k1 - 1e-8)
-                # print('Low:', lower_bound)
-                # print('High:', upper_bound)
-                # print("FLow:", min_core_loc_from_shell(lower_bound))
-                # print("FHigh:", min_core_loc_from_shell(upper_bound))
-                # plt.plot(min_core_loc_from_shell(np.linspace(lower_bound, upper_bound, 1000)))
+            return result
 
-                # This is the fallback for the case of where the sign doesn't change, and we have to drop the lower
-                # limit to 0.
-                if min_core_loc_from_shell(lower_bound) * min_core_loc_from_shell(upper_bound) > 0:  # No sign change.
-                    warn("Pls.")
-                    print(self.cmat.m_e)
-                    plt.plot(np.linspace(lower_bound, upper_bound, 1000), min_core_loc_from_shell(np.linspace(lower_bound, upper_bound, 1000)))
-
-                    # warn(
-                    #     "Lowering localization search limit. This goes against the paper."
-                    # )
-                    # TODO: This lower bound does not agree with the paper. Need to figure this garbage out.
-                    (lower_bound, upper_bound), bracket_found = scan_and_bracket(
-                        min_core_loc_from_shell, 0, upper_bound, resolution
-                    )
-                    plt.plot(np.linspace(lower_bound, upper_bound, 1000),
-                             min_core_loc_from_shell(np.linspace(lower_bound, upper_bound, 1000)))
-                    plt.show()
-                    # print('FALLBACKLOW:', lower_bound)
-                    # print('FALLBACKHIGH:', upper_bound)
-                    # print("FBFLOW:", min_core_loc_from_shell(lower_bound))
-                    # print('FLow+:', min_core_loc_from_shell(x1 / k1 + 1e-4))
-                    # print("FBFHIGH:", min_core_loc_from_shell(upper_bound))
-
-                result = brentq(min_core_loc_from_shell, lower_bound, upper_bound)
-
-                # Returning with proper scaling.
-                return result
-            else:
-                raise ValueError
-
-    def localization_hole_shell(self, core_width: float = None, asymp: bool=False) -> float:
+    def localization_hole_shell(self, core_width: float = None, asymp: bool = False) -> float:
         """Minimum core width for localization of hole for a given shell width.
 
         Parameters
@@ -555,6 +493,8 @@ class CoreShellParticle:
             The core width for which to calculate the shell localization width. If no value is given, the coreshell's
             current core width is used.
 
+        asymp : bool
+            If true, returns the asymptotic minimum shell thickness for hole localization, for large core radii.
         Returns
         -------
         float, nanometers. : The minimum shell localization radius.
@@ -566,12 +506,8 @@ class CoreShellParticle:
         if core_width is None:
             core_width = self.core_width
 
-        # This could use a cached value. This does not change.
-        # In the Piryatinski 2007 paper, this is used to set a lower bound on the core radius search bracket.
-        # However, I've noticed that this lower bracket often fails. Need to look more into why.
-
         q1 = wavenumber_from_energy(self.uh, self.smat.m_h)
-        # print("q1 is:", q1)
+
         if asymp:
             return np.pi / (2 * q1)
 
@@ -581,7 +517,9 @@ class CoreShellParticle:
         result = brentq(min_shell_loc_from_core, np.pi / (2 * q1) + 1e-8, np.pi / q1 - 1e-8)
         return result
 
-    def coulomb_screening_energy(self, relative_tolerance: float = 1e-5, plot_integrand: bool = False, cmap: str='coolwarm'):
+    def coulomb_screening_energy(
+        self, relative_tolerance: float = 1e-5, plot_integrand: bool = False, cmap: str = "coolwarm"
+    ):
         """ Calculates the Coulomb screening energy. Somewhat slow.
 
         Parameters
@@ -591,6 +529,8 @@ class CoreShellParticle:
 
         plot_integrand : bool
 
+        cmap : str
+
         Returns
         -------
         2-array of floats: The Coulomb screening energy and error.
@@ -598,8 +538,6 @@ class CoreShellParticle:
         """
         coulomb_screening_operator = make_coulomb_screening_operator(self)
         k_e, q_e, k_h, q_h = self.calculate_wavenumbers()
-        # print(k_e, q_e)
-        # print(k_e, k_h, q_e, q_h)
         norm_e, norm_h = self._normalization()
 
         # Electron/hole density functions.
@@ -661,7 +599,7 @@ class CoreShellParticle:
             (integral_region_one + integral_region_two + integral_region_three + integral_region_four) * norm_h * norm_e
         )
 
-        # !!! DO NOT DELETE THIS CODE. THIS CODE IS A TESTAMENT TO THE LIMITATIONS OF QUADRATURE ALGORITHMS.
+        # DO NOT DELETE THIS CODE. THIS CODE IS A TESTAMENT TO THE LIMITATIONS OF QUADRATURE ALGORITHMS.
         # whole_integral = (
         #     np.array(
         #         dblquad(
@@ -692,18 +630,21 @@ class CoreShellParticle:
             plt.show()
         #
         #
-        # !!! ALSO THIS. THIS IS A ROMBERG INTEGRAL TO SHOW US THAT THE PIECEWISE APPROACH IS CORRECT.
+        # ALSO THIS. THIS IS A ROMBERG INTEGRAL TO SHOW US THAT THE PIECEWISE APPROACH IS CORRECT.
         # trapzed = romb(romb(zz)) * dr * dr * norm_e * norm_h
         # print(whole_integral[0], sectioned_integral[0], trapzed)
         return sectioned_integral
 
-    def interface_polarization_energy(self, relative_tolerance: float = 1e-5, plot_integrand: bool = False, cmap: str='coolwarm'):
+    def interface_polarization_energy(
+        self, relative_tolerance: float = 1e-5, plot_integrand: bool = False, cmap: str = "coolwarm"
+    ):
         """
 
         Parameters
         ----------
-        relative_tolerance
-        plot_integrand
+        relative_tolerance : float
+        plot_integrand : bool
+        cmap : str
 
         Returns
         -------
@@ -715,7 +656,6 @@ class CoreShellParticle:
         k_e, q_e, k_h, q_h = self.calculate_wavenumbers()
         norm_e, norm_h = self._normalization()
 
-        # print("L484: norms", norm_e, norm_e)
         # Electron/hole density functions.
         def edf(x):
             return abs(_wavefunction(x, k_e, q_e, self.core_width, self.shell_width)) ** 2
@@ -726,9 +666,8 @@ class CoreShellParticle:
         def polarization_integrand(r1, r2):
             return r1 ** 2 * r2 ** 2 * edf(r1) * hdf(r2) * interface_polarization_operator(r1, r2)
 
-        # print("L504, wnums", k_e, q_e, k_h, q_h)
         piecewise_discontinuity_exclusion = 0.0
-        # Energy returned in units of eV.
+
         # r1 < R, r2 < R
         integral_region_one = np.array(
             dblquad(
@@ -779,7 +718,7 @@ class CoreShellParticle:
             (integral_region_one + integral_region_two + integral_region_three + integral_region_four) * norm_e * norm_h
         )
 
-        # !!! DO NOT DELETE THIS CODE. THIS CODE IS A TESTAMENT TO THE LIMITATIONS OF QUADRATURE ALGORITHMS.
+        # DO NOT DELETE THIS CODE. THIS CODE IS A TESTAMENT TO THE LIMITATIONS OF QUADRATURE ALGORITHMS.
         # whole_integral = (
         #     np.array(
         #         dblquad(
@@ -810,7 +749,6 @@ class CoreShellParticle:
             plt.title("Polarization integrand")
             plt.show()
 
-        # trapzed = romb(romb(zz)) * dr * dr * norm_e * norm_h
         return sectioned_integral
 
     # This is likely to get refactored later to return types.
@@ -819,7 +757,9 @@ class CoreShellParticle:
 
     def _is_type_two(self):
         """"A type two QD has both conduction and valence band edges of its core either higher or lower than the
-        corresponding band edges of the shell."""
+        corresponding band edges of the shell.
+
+        """
         core_higher = (self.cmat.vbe > self.smat.vbe) and (self.cmat.cbe > self.smat.cbe)
         shell_higher = (self.cmat.vbe < self.smat.vbe) and (self.cmat.cbe < self.smat.cbe)
         return core_higher or shell_higher, core_higher, shell_higher
