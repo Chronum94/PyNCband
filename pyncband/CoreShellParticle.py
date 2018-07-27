@@ -63,7 +63,8 @@ class CoreShellParticle:
 
         # Need to refactor this method/
         self.type_two, self.h_e, self.e_h = self._is_type_two()
-        # This is an observer variable so we don't have to recalculate eigen-energies every time.
+        # This is an observer variable so we don't have to recalculate eigen-energies every time
+        # unless core/shell dimensions change.
         self.energies_valid: bool = False
         self.s1_e, self.s1_h = None, None
 
@@ -83,13 +84,14 @@ class CoreShellParticle:
         # For coreshells with massive disparities, the energy scan_and_bracket needs 'adaptive' refinement.
         self.scan_refinement_multiplier = max(core_width, shell_width) / min(core_width, shell_width)
 
-        self.BASE_SCAN_RESOLUTION = 500
+        self.BASE_ENERGY_SCAN_RESOLUTION = 500
         self.MAX_ENERGY_BRACKETING_ATTEMPTS = 500
         self.DEFAULT_ELECTRON_ENERGY_SEARCH_RANGE_EV = 0.1
         self.DEFAULT_HOLE_ENERGY_SEARCH_RANGE_EV = 0.1
 
     def set_core_width(self, x: float):
-        """
+        """Sets the core radius to the new value. This invalidates calculated energies and wavenumbers, and when needed,
+        the values are recalculated.
 
         Parameters
         ----------
@@ -100,14 +102,14 @@ class CoreShellParticle:
         -------
 
         """
-        self.radius -= self.core_width
+        self.radius = self.radius - self.core_width + x
         self.core_width = x
-        self.radius += self.core_width
         self.energies_valid = False
         self.norm_valid = False
 
     def set_shell_width(self, x: float):
-        """
+        """Sets the shell thickness to the new value. This invalidates calculated energies and wavenumbers, and when
+        needed, the values are recalculated.
 
         Parameters
         ----------
@@ -118,14 +120,13 @@ class CoreShellParticle:
         -------
 
         """
-        self.radius -= self.shell_width
+        self.radius = self.radius - self.shell_width + x
         self.shell_width = x
-        self.radius += self.shell_width
         self.energies_valid = False
         self.norm_valid = False
 
     def calculate_wavenumbers(self) -> np.ndarray:
-        """Returns a tuple of the electron wavevectors in the core and the shell.
+        """Returns a 1D 4-element Numpy array of wavenumbers in the core/shell for electrons and holes respectively.
 
         Returns
         -------
@@ -142,9 +143,9 @@ class CoreShellParticle:
         https://doi.org/10.1002/smll.200800841
 
         """
-
+        # _e for electrons, _h for holes.
         energy_e, energy_h = self.calculate_s1_energies()
-        # print('E:', energy_e, energy_h)
+
 
         if self.type_one:
             return np.array(
@@ -175,9 +176,12 @@ class CoreShellParticle:
                     ]
                 )
 
+
     # noinspection PyUnboundLocalVariable,PyUnboundLocalVariable
     def calculate_s1_energies(self, resolution: int = None) -> np.ndarray:
         """Calculates eigenenergies of the S1 exciton state in eV.
+
+        This may be changed in future versions to calculate higher energy states.
 
         Parameters
         ----------
@@ -188,24 +192,26 @@ class CoreShellParticle:
         Returns
         -------
         s1_energies : 2-array of float, eV
-            The s1 exciton energies of electrons and holes.
+            The s1 state energies of electrons and holes.
 
         """
 
+        # This is a heuristic way to scan finer points for larger quantum dots since their energies are lower.
         if resolution is None:
-            resolution = int(self.BASE_SCAN_RESOLUTION * self.scan_refinement_multiplier)
-            # print(resolution)
+            resolution = int(self.BASE_ENERGY_SCAN_RESOLUTION * self.scan_refinement_multiplier)
 
+        # _e for electrons, _h for holes.
         lower_bound_e = 0
         upper_bound_e = self.DEFAULT_ELECTRON_ENERGY_SEARCH_RANGE_EV
         lower_bound_h = 0
         upper_bound_h = self.DEFAULT_HOLE_ENERGY_SEARCH_RANGE_EV
 
         # Energy brackets.
-        electron_bracket_found, hole_bracket_found = (False, False)
-        current_electron_bracketing_attempt, current_hole_bracketing_attempt = (0, 0)
+        electron_bracket_found, hole_bracket_found = False, False
+        current_electron_bracketing_attempt, current_hole_bracketing_attempt = 0, 0
 
-        # Electron eigenvalue residual.
+        # Electron eigenvalue residual, defined here so we don't have to pass in 'self' in the rootfinder.
+        # Might be worth testing for speed/performance.
         def eer(x):
             return electron_eigenvalue_residual(x, self)
 
@@ -224,7 +230,7 @@ class CoreShellParticle:
                 "increaseing MAX_ENERGY_BRACKETING_ATTEMPTS or "
                 "DEFAULT_ELECTRON_ENERGY_SEARCH_RANGE_EV, or both."
             )
-
+        # Use the bracket to find the root.
         self.s1_e = brentq(eer, bracket_low, bracket_high)
 
         # Hole eigenvalue residual.
@@ -246,31 +252,53 @@ class CoreShellParticle:
                 "increaseing MAX_ENERGY_BRACKETING_ATTEMPTS or "
                 "DEFAULT_HOLE_ENERGY_SEARCH_RANGE_EV, or both."
             )
-        # print(current_hole_bracketing_attempt)
 
+        # Use bracket, find root.
         self.s1_h = brentq(her, bracket_low, bracket_high)
 
         self.energies_valid = True
 
         return np.array([self.s1_e, self.s1_h])
 
-    def plot_electron_wavefunction(self):
+    def plot_electron_wavefunction(self, resolution: int = 1000):
         """
+
+        Parameters
+        ----------
+
+        resolution : int
+            The resolution of the 1D wavefunction raster.
 
         Returns
         -------
+        x : 1D array of floats
+            The radial positions along which the wavefunction is sampled.
+
+        y : 1D array of floats
+            The value of the wavefunction, normalized to a peak absolute value of 1.
 
         """
         core_wavenumber, shell_wavenumber, _, _ = self.calculate_wavenumbers()
-        x = np.linspace(0, self.radius, 1000)
+        x = np.linspace(0, self.radius, resolution)
         y = wavefunction(x, core_wavenumber, shell_wavenumber, self.core_width, self.shell_width)
         return x, y / np.max(np.abs(y))
 
     def plot_hole_wavefunction(self):
         """
 
+        Parameters
+        ----------
+
+        resolution : int
+            The resolution of the 1D wavefunction raster.
+
         Returns
         -------
+        x : 1D array of floats
+            The radial positions along which the wavefunction is sampled.
+
+        y : 1D array of floats
+            The value of the wavefunction, normalized to a peak absolute value of 1.
 
         """
         _, _, core_wavenumber, shell_wavenumber = self.calculate_wavenumbers()
@@ -301,6 +329,13 @@ class CoreShellParticle:
         -------
         overlap : float
             The electron-hole overlap integral.
+
+        References
+        ----------
+        .. [1] Piryatinski, A., Ivanov, S. A., Tretiak, S., & Klimov, V. I. (2007). Effect of Quantum and Dielectric \
+        Confinement on the Exciton−Exciton Interaction Energy in Type II Core/Shell Semiconductor Nanocrystals. \
+        Nano Letters, 7(1), 108–115. https://doi.org/10.1021/nl0622404
+
         """
         k_e, q_e, k_h, q_h = self.calculate_wavenumbers()
         K_e, Q_e, K_h, Q_h = (
@@ -320,13 +355,15 @@ class CoreShellParticle:
         shell_integral = -((q_h - q_e) * np.sin(H * (q_h + q_e)) - (q_h + q_e) * np.sin(H * (q_h - q_e))) / shell_denom
         return abs(core_integral + shell_integral) ** 2 * norm_h * norm_e
 
+
     def numerical_overlap_integral(self):
         """Calculates the numerical electron-hole overlap integral.
 
         Returns
         -------
         overlap : [float, float]
-            The electron-hole overlap integral and a rough estimate of the error in the integral.
+            The electron-hole overlap integral. The absolute error is bounded by 1.49e-8. Tolerance bounds may be a
+            user option in the future.
 
         References
         ----------
@@ -354,12 +391,11 @@ class CoreShellParticle:
         overlap_integral_imag = quad(overlap_integrand_imag, 0, self.radius)
         return abs((overlap_integral_real[0] + 1j * overlap_integral_imag[0])) ** 2 * norm_e * norm_h
 
-    def print_e_wf_at_zero(self):
-        """Prints the wavefunction at 0."""
-        print(_wavefunction(0, self.calculate_wavenumbers()[0], self.core_width))
 
     def localization_electron_core(self, shell_width: float = None, asymp: bool = False) -> float:
         """Minimum core width for localization of electron for a given shell width.
+
+        Electrons will only localize in the core in Type 1 core-shells, and Type 2 e/h core-shells.
 
         Parameters
         ----------
@@ -373,7 +409,7 @@ class CoreShellParticle:
         Returns
         -------
         localization_width : float, nanometers
-            The minimum core localization radius.
+            The minimum core radius for electron localization.
 
         """
         if self.type_one:
@@ -387,20 +423,23 @@ class CoreShellParticle:
 
             mass_ratio_coreshell = self.cmat.m_e / self.smat.m_e
 
-            x1 = brentq(_x_residual_function, 0, np.pi - 1e-8, args=(self.cmat.m_e, self.smat.m_e))
+            minimum_size_parameter: float = brentq(minimum_core_localization_size_parameter, 0, np.pi - 1e-8, args=(self.cmat.m_e, self.smat.m_e))
 
-            k1 = (2 * self.cmat.m_e * m_e * self.ue) ** 0.5 / hbar_ev * wavenumber_nm_from_energy_ev
+            threshold_core_wavenumber = (2 * self.cmat.m_e * m_e * self.ue) ** 0.5 / hbar_ev * wavenumber_nm_from_energy_ev
 
             if asymp:
-                return x1 / k1
+                return minimum_size_parameter / threshold_core_wavenumber
 
             def min_core_loc_from_shell(r: float) -> float:
                 # This is correct. This has been fixed from the paper.
-                return shell_width + mass_ratio_coreshell * r / (-1 + mass_ratio_coreshell + 1 / tanxdivx(k1 * r))
+                return shell_width + mass_ratio_coreshell * r / (-1 + mass_ratio_coreshell + 1 / tanxdivx(threshold_core_wavenumber * r))
 
-            lower_bound, upper_bound = (x1 / k1 + 1e-8, np.pi / k1 - 1e-8)
+            # The small offsets are so the floating point negatives/positives do not overflow, and the bracketing
+            # works correctly. This will work fine unless we have a core/shell that tens of thousands of times thicker/thinner than
+            # the shell/core and/or we have a carrier that's tens of thousands of times heavier/lighter in one material than the other.
+            lower_bound, upper_bound = (minimum_size_parameter / threshold_core_wavenumber + 1e-8, np.pi / threshold_core_wavenumber - 1e-8)
 
-            result = brentq(min_core_loc_from_shell, lower_bound, upper_bound)
+            result: float = brentq(min_core_loc_from_shell, lower_bound, upper_bound)
 
             return result
 
@@ -427,15 +466,18 @@ class CoreShellParticle:
 
             core_width = self.core_width
 
-        q1 = (2 * self.smat.m_e * m_e * self.ue) ** 0.5 / hbar_ev * wavenumber_nm_from_energy_ev
+        theshold_shell_wavenumber = (2 * self.smat.m_e * m_e * self.ue) ** 0.5 / hbar_ev * wavenumber_nm_from_energy_ev
 
         if asymp:
-            return np.pi / (2 * q1)
+            return np.pi / (2 * theshold_shell_wavenumber)
         # print('k1', k1, 'x1', x1)
         def min_shell_loc_from_core(h: float) -> float:
-            return core_width + np.tan(q1 * h) / q1
+            return core_width + np.tan(theshold_shell_wavenumber * h) / theshold_shell_wavenumber
 
-        result = brentq(min_shell_loc_from_core, np.pi / (2 * q1) + 1e-8, np.pi / q1 - 1e-8)
+        # The small offsets are so the floating point negatives/positives do not overflow, and the bracketing
+        # works correctly. This will work fine unless we have a core/shell that tens of thousands of times thicker/thinner than
+        # the shell/core and/or we have a carrier that's tens of thousands of times heavier/lighter in one material than the other.
+        result: float  = brentq(min_shell_loc_from_core, np.pi / (2 * theshold_shell_wavenumber) + 1e-8, np.pi / theshold_shell_wavenumber - 1e-8)
         return result
 
     def localization_hole_core(self, shell_width: float = None, resolution=1000, asymp: bool = False) -> float:
@@ -468,19 +510,22 @@ class CoreShellParticle:
 
             mass_ratio_coreshell = self.cmat.m_h / self.smat.m_h
 
-            x1 = brentq(_x_residual_function, 0, np.pi - 1e-10, args=(self.cmat.m_h, self.smat.m_h))
+            minimum_size_parameter: float = brentq(minimum_core_localization_size_parameter, 0, np.pi - 1e-10, args=(self.cmat.m_h, self.smat.m_h))
 
-            k1 = (2 * self.cmat.m_h * m_e * self.uh) ** 0.5 / hbar_ev * wavenumber_nm_from_energy_ev
+            theshold_core_wavenumber = (2 * self.cmat.m_h * m_e * self.uh) ** 0.5 / hbar_ev * wavenumber_nm_from_energy_ev
 
             if asymp:
-                return x1 / k1
+                return minimum_size_parameter / theshold_core_wavenumber
 
             def min_core_loc_from_shell(r: float) -> float:
                 # Fixed from the paper.
-                return shell_width + mass_ratio_coreshell * r / (-1 + mass_ratio_coreshell + 1 / tanxdivx(k1 * r))
+                return shell_width + mass_ratio_coreshell * r / (-1 + mass_ratio_coreshell + 1 / tanxdivx(theshold_core_wavenumber * r))
 
-            lower_bound, upper_bound = (x1 / k1 + 1e-8, np.pi / k1 - 1e-8)
-            result = brentq(min_core_loc_from_shell, lower_bound, upper_bound)
+            # The small offsets are so the floating point negatives/positives do not overflow, and the bracketing
+            # works correctly. This will work fine unless we have a core/shell that tens of thousands of times thicker/thinner than
+            # the shell/core and/or we have a carrier that's tens of thousands of times heavier/lighter in one material than the other.
+            lower_bound, upper_bound = (minimum_size_parameter / theshold_core_wavenumber + 1e-8, np.pi / theshold_core_wavenumber - 1e-8)
+            result: float = brentq(min_core_loc_from_shell, lower_bound, upper_bound)
 
             return result
 
@@ -506,15 +551,18 @@ class CoreShellParticle:
         if core_width is None:
             core_width = self.core_width
 
-        q1 = wavenumber_from_energy(self.uh, self.smat.m_h)
+        theshold_shell_wavenumber = wavenumber_from_energy(self.uh, self.smat.m_h)
 
         if asymp:
-            return np.pi / (2 * q1)
+            return np.pi / (2 * theshold_shell_wavenumber)
 
         def min_shell_loc_from_core(h: float) -> float:
-            return core_width + np.tan(q1 * h) / q1
+            return core_width + np.tan(theshold_shell_wavenumber * h) / theshold_shell_wavenumber
 
-        result = brentq(min_shell_loc_from_core, np.pi / (2 * q1) + 1e-8, np.pi / q1 - 1e-8)
+        # The small offsets are so the floating point negatives/positives do not overflow, and the bracketing
+        # works correctly. This will work fine unless we have a core/shell that tens of thousands of times thicker/thinner than
+        # the shell/core and/or we have a carrier that's tens of thousands of times heavier/lighter in one material than the other.
+        result: float = brentq(min_shell_loc_from_core, np.pi / (2 * theshold_shell_wavenumber) + 1e-8, np.pi / theshold_shell_wavenumber - 1e-8)
         return result
 
     def coulomb_screening_energy(
@@ -549,8 +597,6 @@ class CoreShellParticle:
 
         coulomb_integrand = lambda r1, r2: r1 ** 2 * r2 ** 2 * edf(r1) * hdf(r2) * coulomb_screening_operator(r1, r2)
 
-        piecewise_discontinuity_exclusion = 0.0
-
         # Energy returned in units of eV.
         # r1 < R, r2 < R
         integral_region_one = np.array(
@@ -562,7 +608,7 @@ class CoreShellParticle:
         integral_region_two = np.array(
             dblquad(
                 coulomb_integrand,
-                self.core_width + piecewise_discontinuity_exclusion,
+                self.core_width,
                 self.radius,
                 0,
                 self.core_width,
@@ -574,9 +620,9 @@ class CoreShellParticle:
         integral_region_three = np.array(
             dblquad(
                 coulomb_integrand,
-                self.core_width + piecewise_discontinuity_exclusion,
+                self.core_width,
                 self.radius,
-                self.core_width + piecewise_discontinuity_exclusion,
+                self.core_width,
                 self.radius,
                 epsabs=0.0,
                 epsrel=relative_tolerance,
@@ -589,7 +635,7 @@ class CoreShellParticle:
                 coulomb_integrand,
                 0,
                 self.core_width,
-                self.core_width + piecewise_discontinuity_exclusion,
+                self.core_width,
                 self.radius,
                 epsabs=0.0,
                 epsrel=relative_tolerance,
@@ -666,7 +712,6 @@ class CoreShellParticle:
         def polarization_integrand(r1, r2):
             return r1 ** 2 * r2 ** 2 * edf(r1) * hdf(r2) * interface_polarization_operator(r1, r2)
 
-        piecewise_discontinuity_exclusion = 0.0
 
         # r1 < R, r2 < R
         integral_region_one = np.array(
@@ -679,7 +724,7 @@ class CoreShellParticle:
         integral_region_two = np.array(
             dblquad(
                 polarization_integrand,
-                self.core_width + piecewise_discontinuity_exclusion,
+                self.core_width,
                 self.radius,
                 0,
                 self.core_width,
@@ -692,9 +737,9 @@ class CoreShellParticle:
         integral_region_three = np.array(
             dblquad(
                 polarization_integrand,
-                self.core_width + piecewise_discontinuity_exclusion,
+                self.core_width,
                 self.radius,
-                self.core_width + piecewise_discontinuity_exclusion,
+                self.core_width,
                 self.radius,
                 epsabs=0.0,
                 epsrel=relative_tolerance,
@@ -707,7 +752,7 @@ class CoreShellParticle:
                 polarization_integrand,
                 0,
                 self.core_width,
-                self.core_width + piecewise_discontinuity_exclusion,
+                self.core_width,
                 self.radius,
                 epsabs=0.0,
                 epsrel=relative_tolerance,
@@ -751,9 +796,11 @@ class CoreShellParticle:
 
         return sectioned_integral
 
+
     # This is likely to get refactored later to return types.
     def _is_type_one(self):
         return (self.cmat.vbe > self.smat.vbe) and (self.cmat.cbe < self.smat.cbe)
+
 
     def _is_type_two(self):
         """"A type two QD has both conduction and valence band edges of its core either higher or lower than the
@@ -763,6 +810,7 @@ class CoreShellParticle:
         core_higher = (self.cmat.vbe > self.smat.vbe) and (self.cmat.cbe > self.smat.cbe)
         shell_higher = (self.cmat.vbe < self.smat.vbe) and (self.cmat.cbe < self.smat.cbe)
         return core_higher or shell_higher, core_higher, shell_higher
+
 
     def _normalization(self):
 

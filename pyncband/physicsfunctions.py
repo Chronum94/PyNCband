@@ -22,7 +22,7 @@ __all__ = [
     "wavenumber_from_energy",
     "electron_eigenvalue_residual",
     "hole_eigenvalue_residual",
-    "_x_residual_function",
+    "minimum_core_localization_size_parameter",
     "_tanxdivx",
     "tanxdivx",
     "_wavefunction",
@@ -394,7 +394,7 @@ def hole_eigenvalue_residual(energy: floatarray, particle: "CoreShellParticle") 
 
 
 @jit(nopython=True)
-def _x_residual_function(x: float, mass_in_core: float, mass_in_shell: float) -> float:
+def minimum_core_localization_size_parameter(x: float, mass_in_core: float, mass_in_shell: float) -> float:
     """This function finds the lower limit for the interval in which to bracket the core localization radius search.
 
     Parameters
