@@ -703,7 +703,7 @@ class CoreShellParticle:
         # print(whole_integral[0], sectioned_integral[0], trapzed)
         return sectioned_integral
 
-    def interface_polarization_energy(
+    def polarization_screening_energy(
         self, relative_tolerance: float = 1e-5, plot_integrand: bool = False, cmap: str = "coolwarm"
     ):
         """

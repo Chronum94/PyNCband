@@ -34,7 +34,7 @@ with w.catch_warnings() as wfil:
         CdS_AlSb.set_shell_width(shellw)
         energies = np.array(CdS_AlSb.calculate_s1_energies()) / e
         coulomb_energy = CdS_AlSb.coulomb_screening_energy()
-        polarization_energy = CdS_AlSb.interface_polarization_energy()
+        polarization_energy = CdS_AlSb.polarization_screening_energy()
         print("EG", energies)
         print("CE:", coulomb_energy)
         print("PE:", polarization_energy)

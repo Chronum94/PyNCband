@@ -46,9 +46,9 @@ print("Electron k in c/s, hole k in c/s:\n", cs2_s1_wavenumbers)
 # print("Min core LIMIT for e-loc:", coreshell_2.localization_electron_core(1e5) / n_)
 # print("Min shell LIMIT for h-loc:", coreshell_2.localization_hole_shell(1e5) / n_)
 # print("Coulomb screening energy:", coreshell_1.coulomb_screening_energy())
-# print("Interface polarization energy:", coreshell_1.interface_polarization_energy())
+# print("Interface polarization energy:", coreshell_1.polarization_screening_energy())
 # print("Coulomb screening energy:", coreshell_2.coulomb_screening_energy())
-# print("Interface polarization energy:", coreshell_2.interface_polarization_energy())
+# print("Interface polarization energy:", coreshell_2.polarization_screening_energy())
 # coreshell_1.plot_potential_profile()
 # plt.plot(
 #     np.abs(

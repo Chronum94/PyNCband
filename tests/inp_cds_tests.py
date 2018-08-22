@@ -30,7 +30,7 @@ def main():
         # print(energies)
         plots = False
         col_energy_sectioned = csnc.coulomb_screening_energy(plot_integrand=plots)
-        pol_energy_sectioned = csnc.interface_polarization_energy(plot_integrand=plots)
+        pol_energy_sectioned = csnc.polarization_screening_energy(plot_integrand=plots)
         xx_coulomb_sectioned = csnc.biexciton_coulomb_screening_energy()
         # print(xx_coulomb_sectioned)
         # whole_integral_energy = (
