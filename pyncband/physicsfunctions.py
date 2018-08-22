@@ -331,13 +331,6 @@ def electron_eigenvalue_residual(energy: floatarray, particle: "CoreShellParticl
     shell_width = particle.shell_width
     mass_ratio = particle.smat.m_e / particle.cmat.m_e
 
-    # shelltan = 1 / tanxdivx(shell_x)
-    # coretan = 1 / tanxdivx(core_x)
-    # if type(shelltan) not in [np.float64, np.complex128]:
-    #     a = max(np.imag(shell_x))
-    #     b = max(np.imag(core_x))
-    # print("Something large:", np.any(np.imag(shell_x) > 1e4))
-    # print("Something large:", np.any(np.imag(core_x) > 1e4))
     if type(core_x) in [np.float64, np.complex128]:
         return np.real((1 - 1 / _tanxdivx(core_x)) * mass_ratio - 1 - 1 / _tanxdivx(shell_x) * core_width / shell_width)
     else:
