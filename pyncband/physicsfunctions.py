@@ -315,6 +315,11 @@ def electron_eigenvalue_residual(energy: floatarray, particle: "CoreShellParticl
 
     if particle.type_one:
         # Energy step is in the core.
+        core_electron_wavenumber = wavenumber_from_energy(energy, particle.cmat.m_e)
+        shell_electron_wavenumber = wavenumber_from_energy(energy, particle.smat.m_e, potential_offset=particle.ue)
+
+    elif particle.type_one_reverse:
+        # Energy step is in the core.
         core_electron_wavenumber = wavenumber_from_energy(energy, particle.cmat.m_e, potential_offset=particle.ue)
         shell_electron_wavenumber = wavenumber_from_energy(energy, particle.smat.m_e)
 
@@ -364,8 +369,13 @@ def hole_eigenvalue_residual(energy: floatarray, particle: "CoreShellParticle") 
     """
     core_hole_wavenumber, shell_hole_wavenumber = (None, None)
     if particle.type_one:
+        core_hole_wavenumber = wavenumber_from_energy(energy, particle.cmat.m_h)
+        shell_hole_wavenumber = wavenumber_from_energy(energy, particle.smat.m_h, potential_offset=particle.uh)
+
+    elif particle.type_one_reverse:
         core_hole_wavenumber = wavenumber_from_energy(energy, particle.cmat.m_h, potential_offset=particle.uh)
         shell_hole_wavenumber = wavenumber_from_energy(energy, particle.smat.m_h)
+
 
     elif particle.type_two:
         if particle.e_h:

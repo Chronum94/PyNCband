@@ -149,19 +149,19 @@ class CoreShellParticle:
         if self.type_one:
             return np.array(
                 [
-                    wavenumber_from_energy(energy_e, self.cmat.m_e, potential_offset=self.ue),
-                    wavenumber_from_energy(energy_e, self.smat.m_e),
-                    wavenumber_from_energy(energy_h, self.cmat.m_h, potential_offset=self.uh),
-                    wavenumber_from_energy(energy_h, self.smat.m_h),
+                    wavenumber_from_energy(energy_e, self.cmat.m_e),
+                    wavenumber_from_energy(energy_e, self.smat.m_e, potential_offset=self.ue),
+                    wavenumber_from_energy(energy_h, self.cmat.m_h),
+                    wavenumber_from_energy(energy_h, self.smat.m_h, potential_offset=self.uh),
                 ]
             )
         elif self.type_one_reverse:
             return np.array(
                 [
-                    wavenumber_from_energy(energy_e, self.cmat.m_e),
-                    wavenumber_from_energy(energy_e, self.smat.m_e, potential_offset=self.ue),
-                    wavenumber_from_energy(energy_h, self.cmat.m_h),
-                    wavenumber_from_energy(energy_h, self.smat.m_h, potential_offset=self.uh),
+                    wavenumber_from_energy(energy_e, self.cmat.m_e, potential_offset=self.ue),
+                    wavenumber_from_energy(energy_e, self.smat.m_e),
+                    wavenumber_from_energy(energy_h, self.cmat.m_h, potential_offset=self.uh),
+                    wavenumber_from_energy(energy_h, self.smat.m_h),
                 ]
             )
         elif self.type_two:
@@ -916,7 +916,7 @@ class CoreShellParticle:
         is_reverse_type_one = (self.cmat.vbe < self.smat.vbe) and (self.cmat.cbe > self.smat.cbe)
         return is_type_one, is_reverse_type_one
 
-    def _is_type_two(self):
+    def _is_type_two(self) -> (bool, bool, bool):
         """"A type two QD has both conduction and valence band edges of its core either higher or lower than the
         corresponding band edges of the shell.
 
