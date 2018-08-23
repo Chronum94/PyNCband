@@ -48,6 +48,8 @@ class CoreShellParticle:
         assert core_width is not None
         assert shell_width is not None
 
+        self.name = core_material.name + "/" + shell_material.name
+
         self.cmat = core_material
         self.smat = shell_material
 
@@ -944,3 +946,6 @@ class CoreShellParticle:
             self.norm_h = 1 / hole_density_integral
             self.norm_valid = True
             return self.norm_e, self.norm_h
+
+    def __str__(self):
+        return self.name

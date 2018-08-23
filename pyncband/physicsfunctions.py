@@ -286,6 +286,7 @@ def wavenumber_from_energy(energy: float, mass: float, potential_offset: float =
     return csqrt(2 * mass * m_e * (energy - potential_offset)) / hbar_ev * wavenumber_nm_from_energy_ev
 
 
+
 def electron_eigenvalue_residual(energy: floatarray, particle: "CoreShellParticle") -> float:
     """This function returns the residual of the electron energy level eigenvalue equation. Used with root-finding
     methods to calculate the lowest energy state.
@@ -314,7 +315,7 @@ def electron_eigenvalue_residual(energy: floatarray, particle: "CoreShellParticl
     core_electron_wavenumber, shell_electron_wavenumber = (None, None)
 
     if particle.type_one:
-        # Energy step is in the core.
+        # Energy step is in the shell.
         core_electron_wavenumber = wavenumber_from_energy(energy, particle.cmat.m_e)
         shell_electron_wavenumber = wavenumber_from_energy(energy, particle.smat.m_e, potential_offset=particle.ue)
 
