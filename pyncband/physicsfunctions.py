@@ -286,7 +286,6 @@ def wavenumber_from_energy(energy: float, mass: float, potential_offset: float =
     return csqrt(2 * mass * m_e * (energy - potential_offset)) / hbar_ev * wavenumber_nm_from_energy_ev
 
 
-
 def electron_eigenvalue_residual(energy: floatarray, particle: "CoreShellParticle") -> float:
     """This function returns the residual of the electron energy level eigenvalue equation. Used with root-finding
     methods to calculate the lowest energy state.
@@ -376,7 +375,6 @@ def hole_eigenvalue_residual(energy: floatarray, particle: "CoreShellParticle") 
     elif particle.type_one_reverse:
         core_hole_wavenumber = wavenumber_from_energy(energy, particle.cmat.m_h, potential_offset=particle.uh)
         shell_hole_wavenumber = wavenumber_from_energy(energy, particle.smat.m_h)
-
 
     elif particle.type_two:
         if particle.e_h:
@@ -502,6 +500,10 @@ def make_interface_polarization_operator(coreshellparticle: "CoreShellParticle")
         return val * e / (n_ * eps0) * 1 / (4.0 * np.pi)  # Scaling with physical quantities.
 
     return interface_polarization_operator
+
+
+def make_solvation_energy_kernel():
+    raise NotImplementedError
 
 
 def scan_and_bracket(
