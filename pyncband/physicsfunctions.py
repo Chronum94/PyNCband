@@ -30,6 +30,7 @@ __all__ = [
     "_densityfunction",
     "make_coulomb_screening_operator",
     "make_interface_polarization_operator",
+    "make_self_interaction_operator",
     "floatcomplex",
     "scan_and_bracket",
 ]
@@ -502,8 +503,88 @@ def make_interface_polarization_operator(coreshellparticle: "CoreShellParticle")
     return interface_polarization_operator
 
 
-def make_solvation_energy_kernel():
-    raise NotImplementedError
+def make_self_interaction_operator(coreshellparticle: "CoreShellParticle") -> Callable:
+    """Creates a self-interaction operator function for a particular particle.
+
+    This is the operator to model the respulsion that one part of an electron/hole's wavefunction experiences due to \
+    the other parts of the wavefunction of the same particle.
+
+    Parameters
+    ----------
+    coreshellparticle : CoreShellParticle
+
+    Returns
+    -------
+    self_interaction_operator : Callable(r1, r2)
+        The Coulomb screening operator as a function of the two radial coordinates of the two excitons.
+
+    References
+    ----------
+    .. [1] Piryatinski, A., Ivanov, S. A., Tretiak, S., & Klimov, V. I. (2007). Effect of Quantum and Dielectric \
+    Confinement on the Exciton−Exciton Interaction Energy in Type II Core/Shell Semiconductor Nanocrystals. \
+    Nano Letters, 7(1), 108–115. https://doi.org/10.1021/nl0622404
+
+    """
+
+    # Stripping these variables of the coreshellparticle so Numba can use them.
+    core_width = coreshellparticle.core_width
+    core_eps, shell_eps = (coreshellparticle.cmat.eps, coreshellparticle.smat.eps)
+    particle_radius = coreshellparticle.radius
+    env_eps = coreshellparticle.environment_epsilon
+
+    @jit([float64(float64)], nopython=True)
+    def self_interaction_operator(r) -> float:
+
+        MAX_EXPANSION_ORDER = 50
+        r_c = core_width
+        r_p = particle_radius
+        operator_value = 0.0
+        rbar = r_c / r_p
+        if r < r_c:
+
+            for n in range(MAX_EXPANSION_ORDER):
+                alpha_n = n * (core_eps / shell_eps - 1) / (n * core_eps / shell_eps + n + 1)
+                beta_n = (n + 1) * (shell_eps / env_eps - 1) / (n * shell_eps / env_eps + n + 1)
+                gamma_n = (2 * n + 1) / (n * core_eps / shell_eps + n + 1)
+
+
+                core_term = (
+                    ((gamma_n * core_eps / shell_eps - 1) / (1 + alpha_n * beta_n * rbar ** (2 * n + 1)))
+                    * r ** (2 * n)
+                    / r_c ** (2 * n + 1)
+                )
+
+                shell_term = (
+                    (beta_n * (gamma_n * core_eps / shell_eps - alpha_n) / (1 + alpha_n * beta_n * rbar ** (2 * n + 1)))
+                    * r ** (2 * n)
+                    / r_p ** (2 * n + 1)
+                )
+
+                operator_value += core_term + shell_term
+            screening_multiplier = 0.5 / core_eps
+        elif r >= r_c:
+
+            for n in range(MAX_EXPANSION_ORDER):
+                alpha_n = n * (core_eps / shell_eps - 1) / (n * core_eps / shell_eps + n + 1)
+                beta_n = (n + 1) * (shell_eps / env_eps - 1) / (n * shell_eps / env_eps + n + 1)
+
+                shell_term = (
+                        (beta_n / (1 + alpha_n * beta_n * rbar ** (2 * n + 1)))
+                        * r ** (2 * n)
+                        / r_p ** (2 * n + 1)
+                )
+
+                env_term_one = - 2 * ((alpha_n * beta_n * rbar ** (2 * n + 1)) / (
+                                    1 + alpha_n * beta_n * rbar ** (2 * n + 1))) / r
+
+                env_term_two = - (alpha_n / (1 + alpha_n * beta_n * rbar ** (2 * n + 1))) * r_c ** (2 * n + 1) / r ** (2 * n + 2)
+
+                operator_value += shell_term + env_term_one + env_term_two
+
+            screening_multiplier = 0.5 / shell_eps
+        return operator_value * e / (n_ * eps0) * 1 / (4.0 * np.pi) * screening_multiplier
+
+    return self_interaction_operator
 
 
 def scan_and_bracket(

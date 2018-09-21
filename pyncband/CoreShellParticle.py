@@ -818,6 +818,50 @@ class CoreShellParticle:
 
         return sectioned_integral
 
+    def self_interaction_energy(
+        self, relative_tolerance: float = 1e-5, plot_integrand: bool = False, cmap: str = "coolwarm"
+    ):
+        """
+
+        Parameters
+        ----------
+        relative_tolerance : float
+        plot_integrand : bool
+        cmap : str
+
+        Returns
+        -------
+
+        """
+
+        self_interaction_operator = make_self_interaction_operator(self)
+
+        k_e, q_e, k_h, q_h = self.calculate_wavenumbers()
+        norm_e, norm_h = self._normalization()
+
+        # Electron/hole density functions.
+        def edf(x):
+            return _densityfunction(x, k_e, q_e, self.core_width, self.shell_width)
+
+        def hdf(x):
+            return _densityfunction(x, k_h, q_h, self.core_width, self.shell_width)
+
+        def electron_self_energy_integrand(r):
+            return r ** 2 * edf(r) ** 2 * self_interaction_operator(r)
+
+        def hole_self_energy_integrand(r):
+            return r ** 2 * hdf(r) ** 2 * self_interaction_operator(r)
+
+        integrand_in_core_electron, err = quad(electron_self_energy_integrand, 0, self.core_width, epsabs=0.0, epsrel=relative_tolerance)
+        integrand_in_shell_electron, err = quad(electron_self_energy_integrand, self.core_width, self.radius, epsabs=0.0, epsrel=relative_tolerance)
+
+        integrand_in_core_hole, err = quad(hole_self_energy_integrand, 0, self.core_width, epsabs=0.0,
+                                               epsrel=relative_tolerance)
+        integrand_in_shell_hole, err = quad(hole_self_energy_integrand, self.core_width, self.radius,
+                                                epsabs=0.0, epsrel=relative_tolerance)
+        return (integrand_in_core_electron + integrand_in_shell_electron) * norm_e + (integrand_in_core_hole + integrand_in_shell_hole) * norm_h
+
+
     def biexciton_coulomb_screening_energy(
         self, relative_tolerance: float = 1e-5, plot_integrand: bool = False, cmap: str = "coolwarm"
     ):
@@ -926,7 +970,7 @@ class CoreShellParticle:
         shell_higher = (self.cmat.vbe < self.smat.vbe) and (self.cmat.cbe < self.smat.cbe)
         return core_higher or shell_higher, core_higher, shell_higher
 
-    def _normalization(self):
+    def _normalization(self) -> (float, float):
 
         if self.norm_valid:
             return self.norm_e, self.norm_h
