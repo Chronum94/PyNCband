@@ -60,7 +60,6 @@ class CoreShellParticle:
         self.shell_width = shell_width
         self.radius = core_width + shell_width
 
-        # TODO: Need to add support for reverse type one.
         self.type_one, self.type_one_reverse = self._is_type_one()
 
         # Need to refactor this method/

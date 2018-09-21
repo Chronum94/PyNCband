@@ -49,7 +49,10 @@ class Material:
         self.m_e: float = electron_eff_mass
         self.m_h: float = hole_eff_mass
         self.eps: float = epsilon
-        self.name: str = name
+        if name is not None:
+            self.name: str = name
+        else:
+            self.name: str = "NO_NAME_GIVEN"
 
     def __str__(self):
         if self.name is not None:
