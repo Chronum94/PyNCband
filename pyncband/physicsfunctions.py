@@ -535,27 +535,38 @@ def make_self_interaction_operator(coreshellparticle: "CoreShellParticle") -> Ca
     @jit([float64(float64)], nopython=True)
     def self_interaction_operator(r) -> float:
 
-        MAX_EXPANSION_ORDER = 50
+        MAX_EXPANSION_ORDER = 150
         r_c = core_width
         r_p = particle_radius
         operator_value = 0.0
+        screening_multiplier = None
         rbar = r_c / r_p
+
+        # Checked times: 6.
         if r < r_c:
-
+            operator_value = 0.0
             for n in range(MAX_EXPANSION_ORDER):
-                alpha_n = n * (core_eps / shell_eps - 1) / (n * core_eps / shell_eps + n + 1)
-                beta_n = (n + 1) * (shell_eps / env_eps - 1) / (n * shell_eps / env_eps + n + 1)
-                gamma_n = (2 * n + 1) / (n * core_eps / shell_eps + n + 1)
+                # print("LMAOCORE")
+                eps_cs_neg = core_eps / shell_eps - 1
+                eps_cs_pos = eps_cs_neg + 2
 
+                eps_se_neg = shell_eps / env_eps - 1
+                eps_se_pos = eps_se_neg + 2
+
+                alpha_n = n * eps_cs_neg / (n * eps_cs_pos + 1)
+                beta_n = (n + 1) * eps_se_neg / (n * eps_se_pos + 1)
+                gamma_n = (2 * n + 1) / (n * eps_cs_pos + 1)
+
+                alpha_beta_pos = 1 + alpha_n * beta_n * rbar ** (2 * n + 1)
 
                 core_term = (
-                    ((gamma_n * core_eps / shell_eps - 1) / (1 + alpha_n * beta_n * rbar ** (2 * n + 1)))
+                    (gamma_n * eps_cs_neg / alpha_beta_pos)
                     * r ** (2 * n)
                     / r_c ** (2 * n + 1)
                 )
 
                 shell_term = (
-                    (beta_n * (gamma_n * core_eps / shell_eps - alpha_n) / (1 + alpha_n * beta_n * rbar ** (2 * n + 1)))
+                    (beta_n * (gamma_n * core_eps / shell_eps - alpha_n) / alpha_beta_pos)
                     * r ** (2 * n)
                     / r_p ** (2 * n + 1)
                 )
@@ -563,21 +574,29 @@ def make_self_interaction_operator(coreshellparticle: "CoreShellParticle") -> Ca
                 operator_value += core_term + shell_term
             screening_multiplier = 0.5 / core_eps
         elif r >= r_c:
-
+            operator_value = 0.0
             for n in range(MAX_EXPANSION_ORDER):
-                alpha_n = n * (core_eps / shell_eps - 1) / (n * core_eps / shell_eps + n + 1)
-                beta_n = (n + 1) * (shell_eps / env_eps - 1) / (n * shell_eps / env_eps + n + 1)
+                # print("LMAOSHELL")
+                eps_cs_neg = core_eps / shell_eps - 1
+                eps_cs_pos = eps_cs_neg + 2
 
-                shell_term = (
-                        (beta_n / (1 + alpha_n * beta_n * rbar ** (2 * n + 1)))
-                        * r ** (2 * n)
-                        / r_p ** (2 * n + 1)
+                eps_se_neg = shell_eps / env_eps - 1
+                eps_se_pos = eps_se_neg + 2
+
+                alpha_n = n * eps_cs_neg / (n * eps_cs_pos + 1)
+                beta_n = (n + 1) * eps_se_neg / (n * eps_se_pos + 1)
+
+                alpha_beta_pos = 1 + alpha_n * beta_n * rbar ** (2 * n + 1)
+
+                shell_term = (beta_n / alpha_beta_pos) * r ** (2 * n) / r_p ** (2 * n + 1)
+
+                env_term_one = (
+                    -2 * (alpha_beta_pos - 1) / (alpha_beta_pos * r)
                 )
 
-                env_term_one = - 2 * ((alpha_n * beta_n * rbar ** (2 * n + 1)) / (
-                                    1 + alpha_n * beta_n * rbar ** (2 * n + 1))) / r
-
-                env_term_two = - (alpha_n / (1 + alpha_n * beta_n * rbar ** (2 * n + 1))) * r_c ** (2 * n + 1) / r ** (2 * n + 2)
+                env_term_two = (
+                    -(alpha_n / alpha_beta_pos) * r_c ** (2 * n + 1) / r ** (2 * n + 2)
+                )
 
                 operator_value += shell_term + env_term_one + env_term_two
 

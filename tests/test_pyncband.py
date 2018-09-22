@@ -225,10 +225,9 @@ def test_core_localization_consistency_with_paper():
 def test_self_interaction_energy():
     a = Material(1.0, 0.0, 1.0, 1.0, 5.0)
     b = Material(1.0, -0.5, 1.0, 1.0, 10.0)  # Lower band edges.
-    csnc1 = CoreShellParticle(a, b, 2.25, 3.0, 2.0)  # Type 2 CSNC. h/e structure.
+    csnc1 = CoreShellParticle(a, b, 1.65, 2.0, 2.0)  # Type 2 CSNC. h/e structure.
 
     print(csnc1.self_interaction_energy())
-
 
 
 test_self_interaction_energy()

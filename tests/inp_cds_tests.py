@@ -31,14 +31,14 @@ def main():
         plots = False
         col_energy_sectioned = csnc.coulomb_screening_energy(plot_integrand=plots)
         pol_energy_sectioned = csnc.polarization_screening_energy(plot_integrand=plots)
-        self_energy = csnc.self_interaction_energy()
+        self_energy = 0# csnc.self_interaction_energy()
         # print(xx_coulomb_sectioned)
         # whole_integral_energy = (
         #     csnc.bandgap + np.sum(energies) + col_energy_whole[0] + pol_energy_whole[0]
         # )
         sectioned_integral_energy = (
             csnc.bandgap + np.sum(energies) + col_energy_sectioned[0] + pol_energy_sectioned[0]
-        ) + self_energy # + xx_coulomb_sectioned[0]
+        ) + self_energy  # + xx_coulomb_sectioned[0]
         # print("Col:", col_energy_whole, col_energy_sectioned, "Pol:", pol_energy)
         # print("NC bandgap:", csnc.bandgap)
         print(experimental_bandgaps[i], end="\t")
@@ -50,7 +50,7 @@ def main():
         #     end="\t",
         # )
         print(
-            "{:0.3f}\t{:0.3f}\t{:0.3f}\t{:0.3f}\t{:0.3f}\t\t{:0.3f}".format(
+            "{:0.3f}\t{:0.3f}\t{:0.3f}\t{:0.3f}\t{:0.3f}\t{:0.3f}\t{:0.3f}".format(
                 csnc.bandgap,
                 energies[0],
                 energies[1],

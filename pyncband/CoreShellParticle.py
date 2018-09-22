@@ -847,19 +847,27 @@ class CoreShellParticle:
             return _densityfunction(x, k_h, q_h, self.core_width, self.shell_width)
 
         def electron_self_energy_integrand(r):
-            return r ** 2 * edf(r) ** 2 * self_interaction_operator(r)
+            return r ** 2 * edf(r) * self_interaction_operator(r)
 
         def hole_self_energy_integrand(r):
-            return r ** 2 * hdf(r) ** 2 * self_interaction_operator(r)
+            return r ** 2 * hdf(r) * self_interaction_operator(r)
 
-        integrand_in_core_electron, err = quad(electron_self_energy_integrand, 0, self.core_width, epsabs=0.0, epsrel=relative_tolerance)
-        integrand_in_shell_electron, err = quad(electron_self_energy_integrand, self.core_width, self.radius, epsabs=0.0, epsrel=relative_tolerance)
+        integrand_in_core_electron = quad(
+            electron_self_energy_integrand, 0, self.core_width, epsabs=0.0, epsrel=relative_tolerance
+        )
+        integrand_in_shell_electron = quad(
+            electron_self_energy_integrand, self.core_width, self.radius, epsabs=0.0, epsrel=relative_tolerance
+        )
 
-        integrand_in_core_hole, err = quad(hole_self_energy_integrand, 0, self.core_width, epsabs=0.0,
-                                               epsrel=relative_tolerance)
-        integrand_in_shell_hole, err = quad(hole_self_energy_integrand, self.core_width, self.radius,
-                                                epsabs=0.0, epsrel=relative_tolerance)
-        return (integrand_in_core_electron + integrand_in_shell_electron) * norm_e + (integrand_in_core_hole + integrand_in_shell_hole) * norm_h
+        integrand_in_core_hole = quad(
+            hole_self_energy_integrand, 0, self.core_width, epsabs=0.0, epsrel=relative_tolerance
+        )
+        integrand_in_shell_hole = quad(
+            hole_self_energy_integrand, self.core_width, self.radius, epsabs=0.0, epsrel=relative_tolerance
+        )
+        return (integrand_in_core_electron[0] + integrand_in_shell_electron[0]) * norm_e + (
+            integrand_in_core_hole[0] + integrand_in_shell_hole[0]
+        ) * norm_h
 
 
     def biexciton_coulomb_screening_energy(
