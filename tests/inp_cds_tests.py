@@ -13,15 +13,19 @@ from pyncband import Material, CoreShellParticle
 # @profile
 def main():
 
-    inp_effective_electron_mass = 0.1
+    inp_effective_electron_mass = 0.073
     InP = Material(1.34, 0, inp_effective_electron_mass, 0.64, 9.6, "InP")
     CdS = Material(2.20, -0.39, 0.21, 0.68, 5.3, "CdS")
 
     shell_widths = np.array([0.53, 1.05, 1.47, 1.90, 2.76, 3.84])
 
     experimental_bandgaps = [1.78, 1.46, 1.37, 1.32, 1.26, 1.24]
-    print("Using InP electron effective mass: {:0.2f}".format(inp_effective_electron_mass))
-    print("Core \t Shell \tExp \t BG \t E(e): E(h): Coulomb: Polarization: Model(Exp-Model):")
+    print(
+        "Using InP electron effective mass: {:0.2f}".format(inp_effective_electron_mass)
+    )
+    print(
+        "Core \t Shell \tExp \t BG \t E(e): E(h): Coulomb: Polarization: Model(Exp-Model):"
+    )
     for i, shell_width in enumerate(shell_widths):
         csnc = CoreShellParticle(InP, CdS, 1.23, shell_width, 1.5)
         print(1.23, "\t", shell_width, end="\t")
@@ -31,14 +35,17 @@ def main():
         plots = False
         col_energy_sectioned = csnc.coulomb_screening_energy(plot_integrand=plots)
         pol_energy_sectioned = csnc.polarization_screening_energy(plot_integrand=plots)
-        self_energy = 0# csnc.self_interaction_energy()
+        self_energy = csnc.self_interaction_energy()
         # print(xx_coulomb_sectioned)
         # whole_integral_energy = (
         #     csnc.bandgap + np.sum(energies) + col_energy_whole[0] + pol_energy_whole[0]
         # )
         sectioned_integral_energy = (
-            csnc.bandgap + np.sum(energies) + col_energy_sectioned[0] + pol_energy_sectioned[0]
-        ) + self_energy  # + xx_coulomb_sectioned[0]
+            csnc.bandgap
+            + np.sum(energies)
+            + col_energy_sectioned[0]
+            + pol_energy_sectioned[0]  # + self_energy
+        )  # + xx_coulomb_sectioned[0]
         # print("Col:", col_energy_whole, col_energy_sectioned, "Pol:", pol_energy)
         # print("NC bandgap:", csnc.bandgap)
         print(experimental_bandgaps[i], end="\t")
@@ -56,9 +63,8 @@ def main():
                 energies[1],
                 col_energy_sectioned[0],
                 pol_energy_sectioned[0],
-                self_energy,
                 sectioned_integral_energy,
-                # experimental_bandgaps[i] - sectioned_integral_energy,
+                experimental_bandgaps[i] - sectioned_integral_energy,
             ),
             end="\t",
         )

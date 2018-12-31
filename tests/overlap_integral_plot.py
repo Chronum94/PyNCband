@@ -17,7 +17,9 @@ def overlap_integral(core_width, shell_width):
     # col_nrg = csnc.coulomb_screening_energy()
     # pol_nrg = csnc.polarization_screening_energy()
 
-    return csnc.numerical_overlap_integral()  # bg + np.sum(state_nrg) + col_nrg[0] + pol_nrg[0]
+    return (
+        csnc.numerical_overlap_integral()
+    )  # bg + np.sum(state_nrg) + col_nrg[0] + pol_nrg[0]
 
 
 voverlap_integral = np.vectorize(overlap_integral)

@@ -94,7 +94,9 @@ tanxdivx = np.vectorize(_tanxdivx)  # np.vectorize(_tanxdivx, otypes=(np.complex
 
 # This is an annoying type signature. I _may_ consider giving this full type signatures, who knows.
 @jit(nopython=True)
-def _unnormalized_core_wavefunction(x: float, k: floatcomplex, core_width: float) -> floatcomplex:
+def _unnormalized_core_wavefunction(
+    x: float, k: floatcomplex, core_width: float
+) -> floatcomplex:
     """Returns the value of the S-n pherically symmetric wavefunction in the core.
 
     Depending on the values of the wavenumber k, will return the radial component of the solution for Schrodinger's
@@ -134,11 +136,15 @@ def _unnormalized_core_wavefunction(x: float, k: floatcomplex, core_width: float
     return val
 
 
-unnormalized_core_wavefunction = np.vectorize(_unnormalized_core_wavefunction, otypes=(np.complex128,))
+unnormalized_core_wavefunction = np.vectorize(
+    _unnormalized_core_wavefunction, otypes=(np.complex128,)
+)
 
 
 @jit(nopython=True)
-def _unnormalized_shell_wavefunction(x: float, q: floatcomplex, core_width: float, shell_width: float) -> floatcomplex:
+def _unnormalized_shell_wavefunction(
+    x: float, q: floatcomplex, core_width: float, shell_width: float
+) -> floatcomplex:
     """Returns the value of the S1 spherically symmetric wavefunction in the shell.
 
     Depending on the values of the wavenumber q, will return the radial component of the solution for Schrodinger's
@@ -177,12 +183,18 @@ def _unnormalized_shell_wavefunction(x: float, q: floatcomplex, core_width: floa
     return np.sin(q * (core_width + shell_width - x)) / (x * np.sin(q * shell_width))
 
 
-unnormalized_shell_wavefunction = np.vectorize(_unnormalized_shell_wavefunction, otypes=(np.complex128,))
+unnormalized_shell_wavefunction = np.vectorize(
+    _unnormalized_shell_wavefunction, otypes=(np.complex128,)
+)
 
 
 @jit(nopython=True)
 def _wavefunction(
-    x: float, core_wavenumber: floatcomplex, shell_wavenumber: floatcomplex, core_width: float, shell_width: float
+    x: float,
+    core_wavenumber: floatcomplex,
+    shell_wavenumber: floatcomplex,
+    core_width: float,
+    shell_width: float,
 ) -> floatcomplex:
     """Evaluates the radially symmetric wavefunction values of the core-shell semiconductor nanocrystal at given point.
 
@@ -221,7 +233,9 @@ def _wavefunction(
     if 0 <= x < core_width:
         return _unnormalized_core_wavefunction(x, core_wavenumber, core_width)
     elif core_width <= x < particle_width:
-        return _unnormalized_shell_wavefunction(x, shell_wavenumber, core_width, shell_width)
+        return _unnormalized_shell_wavefunction(
+            x, shell_wavenumber, core_width, shell_width
+        )
     else:
         return 0
 
@@ -232,7 +246,11 @@ wavefunction = np.vectorize(_wavefunction, otypes=(np.complex128,))
 
 @jit(nopython=True)
 def _densityfunction(
-    r: float, core_wavenumber: floatcomplex, shell_wavenumber: floatcomplex, core_width: float, shell_width: float
+    r: float,
+    core_wavenumber: floatcomplex,
+    shell_wavenumber: floatcomplex,
+    core_width: float,
+    shell_width: float,
 ) -> float:
     """Returns the probability density from a wavefunction at a point in the core-shell.
 
@@ -259,11 +277,18 @@ def _densityfunction(
         The probabilty density of the partcle at that radial point in the core-shell semiconductor nanocrystal.
 
     """
-    return abs(_wavefunction(r, core_wavenumber, shell_wavenumber, core_width, shell_width)) ** 2
+    return (
+        abs(
+            _wavefunction(r, core_wavenumber, shell_wavenumber, core_width, shell_width)
+        )
+        ** 2
+    )
 
 
 # @jit(nopython = True) # Jitting this requires type info for csqrt. need to figure that out.
-def wavenumber_from_energy(energy: float, mass: float, potential_offset: float = 0) -> floatcomplex:
+def wavenumber_from_energy(
+    energy: float, mass: float, potential_offset: float = 0
+) -> floatcomplex:
     """ Calculates wavenumber from energy.
 
     Parameters
@@ -284,10 +309,16 @@ def wavenumber_from_energy(energy: float, mass: float, potential_offset: float =
     """
 
     # The 2.498... is to convert to 1/nm when using eV and hbar in eV-s together.
-    return csqrt(2 * mass * m_e * (energy - potential_offset)) / hbar_ev * wavenumber_nm_from_energy_ev
+    return (
+        csqrt(2 * mass * m_e * (energy - potential_offset))
+        / hbar_ev
+        * wavenumber_nm_from_energy_ev
+    )
 
 
-def electron_eigenvalue_residual(energy: floatarray, particle: "CoreShellParticle") -> float:
+def electron_eigenvalue_residual(
+    energy: floatarray, particle: "CoreShellParticle"
+) -> float:
     """This function returns the residual of the electron energy level eigenvalue equation. Used with root-finding
     methods to calculate the lowest energy state.
 
@@ -317,20 +348,30 @@ def electron_eigenvalue_residual(energy: floatarray, particle: "CoreShellParticl
     if particle.type_one:
         # Energy step is in the shell.
         core_electron_wavenumber = wavenumber_from_energy(energy, particle.cmat.m_e)
-        shell_electron_wavenumber = wavenumber_from_energy(energy, particle.smat.m_e, potential_offset=particle.ue)
+        shell_electron_wavenumber = wavenumber_from_energy(
+            energy, particle.smat.m_e, potential_offset=particle.ue
+        )
 
     elif particle.type_one_reverse:
         # Energy step is in the core.
-        core_electron_wavenumber = wavenumber_from_energy(energy, particle.cmat.m_e, potential_offset=particle.ue)
+        core_electron_wavenumber = wavenumber_from_energy(
+            energy, particle.cmat.m_e, potential_offset=particle.ue
+        )
         shell_electron_wavenumber = wavenumber_from_energy(energy, particle.smat.m_e)
 
     elif particle.type_two:
         if particle.e_h:
             core_electron_wavenumber = wavenumber_from_energy(energy, particle.cmat.m_e)
-            shell_electron_wavenumber = wavenumber_from_energy(energy, particle.smat.m_e, potential_offset=particle.ue)
+            shell_electron_wavenumber = wavenumber_from_energy(
+                energy, particle.smat.m_e, potential_offset=particle.ue
+            )
         elif particle.h_e:
-            core_electron_wavenumber = wavenumber_from_energy(energy, particle.cmat.m_e, potential_offset=particle.ue)
-            shell_electron_wavenumber = wavenumber_from_energy(energy, particle.smat.m_e)
+            core_electron_wavenumber = wavenumber_from_energy(
+                energy, particle.cmat.m_e, potential_offset=particle.ue
+            )
+            shell_electron_wavenumber = wavenumber_from_energy(
+                energy, particle.smat.m_e
+            )
     core_x = core_electron_wavenumber * particle.core_width
     shell_x = shell_electron_wavenumber * particle.shell_width
     core_width = particle.core_width
@@ -338,12 +379,22 @@ def electron_eigenvalue_residual(energy: floatarray, particle: "CoreShellParticl
     mass_ratio = particle.smat.m_e / particle.cmat.m_e
 
     if type(core_x) in [np.float64, np.complex128]:
-        return np.real((1 - 1 / _tanxdivx(core_x)) * mass_ratio - 1 - 1 / _tanxdivx(shell_x) * core_width / shell_width)
+        return np.real(
+            (1 - 1 / _tanxdivx(core_x)) * mass_ratio
+            - 1
+            - 1 / _tanxdivx(shell_x) * core_width / shell_width
+        )
     else:
-        return np.real((1 - 1 / tanxdivx(core_x)) * mass_ratio - 1 - 1 / tanxdivx(shell_x) * core_width / shell_width)
+        return np.real(
+            (1 - 1 / tanxdivx(core_x)) * mass_ratio
+            - 1
+            - 1 / tanxdivx(shell_x) * core_width / shell_width
+        )
 
 
-def hole_eigenvalue_residual(energy: floatarray, particle: "CoreShellParticle") -> float:
+def hole_eigenvalue_residual(
+    energy: floatarray, particle: "CoreShellParticle"
+) -> float:
     """This function returns the residual of the hole energy level eigenvalue equation. Used with root-finding
     methods to calculate the lowest energy state.
 
@@ -371,19 +422,27 @@ def hole_eigenvalue_residual(energy: floatarray, particle: "CoreShellParticle") 
     core_hole_wavenumber, shell_hole_wavenumber = (None, None)
     if particle.type_one:
         core_hole_wavenumber = wavenumber_from_energy(energy, particle.cmat.m_h)
-        shell_hole_wavenumber = wavenumber_from_energy(energy, particle.smat.m_h, potential_offset=particle.uh)
+        shell_hole_wavenumber = wavenumber_from_energy(
+            energy, particle.smat.m_h, potential_offset=particle.uh
+        )
 
     elif particle.type_one_reverse:
-        core_hole_wavenumber = wavenumber_from_energy(energy, particle.cmat.m_h, potential_offset=particle.uh)
+        core_hole_wavenumber = wavenumber_from_energy(
+            energy, particle.cmat.m_h, potential_offset=particle.uh
+        )
         shell_hole_wavenumber = wavenumber_from_energy(energy, particle.smat.m_h)
 
     elif particle.type_two:
         if particle.e_h:
-            core_hole_wavenumber = wavenumber_from_energy(energy, particle.cmat.m_h, potential_offset=particle.uh)
+            core_hole_wavenumber = wavenumber_from_energy(
+                energy, particle.cmat.m_h, potential_offset=particle.uh
+            )
             shell_hole_wavenumber = wavenumber_from_energy(energy, particle.smat.m_h)
         elif particle.h_e:
             core_hole_wavenumber = wavenumber_from_energy(energy, particle.cmat.m_h)
-            shell_hole_wavenumber = wavenumber_from_energy(energy, particle.smat.m_h, potential_offset=particle.uh)
+            shell_hole_wavenumber = wavenumber_from_energy(
+                energy, particle.smat.m_h, potential_offset=particle.uh
+            )
     core_x = core_hole_wavenumber * particle.core_width
     shell_x = shell_hole_wavenumber * particle.shell_width
     core_width = particle.core_width
@@ -391,13 +450,23 @@ def hole_eigenvalue_residual(energy: floatarray, particle: "CoreShellParticle") 
     mass_ratio = particle.smat.m_h / particle.cmat.m_h
 
     if type(core_x) in [np.float64, np.complex128]:
-        return np.real((1 - 1 / _tanxdivx(core_x)) * mass_ratio - 1 - 1 / _tanxdivx(shell_x) * core_width / shell_width)
+        return np.real(
+            (1 - 1 / _tanxdivx(core_x)) * mass_ratio
+            - 1
+            - 1 / _tanxdivx(shell_x) * core_width / shell_width
+        )
     else:
-        return np.real((1 - 1 / tanxdivx(core_x)) * mass_ratio - 1 - 1 / tanxdivx(shell_x) * core_width / shell_width)
+        return np.real(
+            (1 - 1 / tanxdivx(core_x)) * mass_ratio
+            - 1
+            - 1 / tanxdivx(shell_x) * core_width / shell_width
+        )
 
 
 @jit(nopython=True)
-def minimum_core_localization_size_parameter(x: float, mass_in_core: float, mass_in_shell: float) -> float:
+def minimum_core_localization_size_parameter(
+    x: float, mass_in_core: float, mass_in_shell: float
+) -> float:
     """This function finds the lower limit for the interval in which to bracket the core localization radius search.
 
     Parameters
@@ -430,7 +499,9 @@ def minimum_core_localization_size_parameter(x: float, mass_in_core: float, mass
         return 1 / _tanxdivx(x) + 1 / mass_ratio_shellcore - 1
 
 
-def make_coulomb_screening_operator(coreshellparticle: "CoreShellParticle") -> Callable:
+def make_coulomb_screening_operator(
+    coreshellparticle: "CoreShellParticle", shell_term_denominator: float = 2
+) -> Callable:
     """Creates a Coulomb interaction operator function for a particular function.
 
     Currently, this assumes opposite charges on the two interacting particles. This will likely need to be changed once
@@ -461,17 +532,21 @@ def make_coulomb_screening_operator(coreshellparticle: "CoreShellParticle") -> C
     def coulomb_screening_operator(r_a: float, r_b: float) -> float:
         rmax = max(r_a, r_b)
         r_c = core_width
-        taz = 0.5  # Theta at zero, theta being step function.
+        taz = 1.0  # Theta at zero, theta being step function.
 
         # The two step functions that are used to calculate the charge regions in the Coulomb interaction operator.
         step1, step2 = (_heaviside(r_c - r_a, taz), _heaviside(r_c - r_b, taz))
-        val = -step1 * step2 / (rmax * core_eps) - (1 - step1 + 1 - step2) / (2 * rmax * shell_eps)
+        val = -step1 * step2 / (rmax * core_eps) - (1 - step1 + 1 - step2) / (
+            shell_term_denominator * rmax * shell_eps
+        )
         return val * e / n_ * 1 / (4.0 * np.pi * eps0)  # Scaling to eV.
 
     return coulomb_screening_operator
 
 
-def make_interface_polarization_operator(coreshellparticle: "CoreShellParticle") -> Callable:
+def make_interface_polarization_operator(
+    coreshellparticle: "CoreShellParticle"
+) -> Callable:
     """Generates the interface polarization operator from the CoreShellParticle inforamtion.
 
     Parameters
@@ -492,13 +567,15 @@ def make_interface_polarization_operator(coreshellparticle: "CoreShellParticle")
 
     @jit(nopython=True)
     def interface_polarization_operator(r_a: float, r_b: float) -> float:
-        r_c = core_width
+        r_c = core_width  # Moving variables to shorter names for conciseness.
         r_p = particle_radius
-        taz = 0.5  # Theta at zero, theta being step function.
-        val = -_heaviside(r_c - r_a, taz) * _heaviside(r_c - r_b, taz) * (core_eps / shell_eps - 1) / (
-            r_c * core_eps
-        ) - (shell_eps / env_eps - 1) / (2 * r_p * shell_eps)
-        return val * e / (n_ * eps0) * 1 / (4.0 * np.pi)  # Scaling with physical quantities.
+        taz = 1.0  # Theta at zero, theta being step function.
+        val = -_heaviside(r_c - r_a, taz) * _heaviside(r_c - r_b, taz) * (
+            core_eps / shell_eps - 1
+        ) / (r_c * core_eps) - (shell_eps / env_eps - 1) / (r_p * shell_eps)
+        return (
+            val * e / (n_ * eps0) * 1 / (4.0 * np.pi)
+        )  # Scaling with physical quantities.
 
     return interface_polarization_operator
 
@@ -535,7 +612,7 @@ def make_self_interaction_operator(coreshellparticle: "CoreShellParticle") -> Ca
     @jit([float64(float64)], nopython=True)
     def self_interaction_operator(r) -> float:
 
-        MAX_EXPANSION_ORDER = 150
+        MAX_EXPANSION_ORDER = 80
         r_c = core_width
         r_p = particle_radius
         operator_value = 0.0
@@ -566,7 +643,11 @@ def make_self_interaction_operator(coreshellparticle: "CoreShellParticle") -> Ca
                 )
 
                 shell_term = (
-                    (beta_n * (gamma_n * core_eps / shell_eps - alpha_n) / alpha_beta_pos)
+                    (
+                        beta_n
+                        * (gamma_n * core_eps / shell_eps - alpha_n)
+                        / alpha_beta_pos
+                    )
                     * r ** (2 * n)
                     / r_p ** (2 * n + 1)
                 )
@@ -588,11 +669,11 @@ def make_self_interaction_operator(coreshellparticle: "CoreShellParticle") -> Ca
 
                 alpha_beta_pos = 1 + alpha_n * beta_n * rbar ** (2 * n + 1)
 
-                shell_term = (beta_n / alpha_beta_pos) * r ** (2 * n) / r_p ** (2 * n + 1)
-
-                env_term_one = (
-                    -2 * (alpha_beta_pos - 1) / (alpha_beta_pos * r)
+                shell_term = (
+                    (beta_n / alpha_beta_pos) * r ** (2 * n) / r_p ** (2 * n + 1)
                 )
+
+                env_term_one = -2 * (alpha_beta_pos - 1) / (alpha_beta_pos * r)
 
                 env_term_two = (
                     -(alpha_n / alpha_beta_pos) * r_c ** (2 * n + 1) / r ** (2 * n + 2)
@@ -601,7 +682,9 @@ def make_self_interaction_operator(coreshellparticle: "CoreShellParticle") -> Ca
                 operator_value += shell_term + env_term_one + env_term_two
 
             screening_multiplier = 0.5 / shell_eps
-        return operator_value * e / (n_ * eps0) * 1 / (4.0 * np.pi) * screening_multiplier
+        return (
+            operator_value * e / (n_ * eps0) * 1 / (4.0 * np.pi) * screening_multiplier
+        )
 
     return self_interaction_operator
 
