@@ -1,5 +1,5 @@
 setuptools>=39.2.0
-matplotlib>=2.2.2
+matplotlib>=3.0.0
 numpy>=1.14.5
 numba>=0.39.0
 scipy>=1.1.0
