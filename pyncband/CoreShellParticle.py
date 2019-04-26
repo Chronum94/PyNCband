@@ -242,6 +242,7 @@ class CoreShellParticle:
 
         # Electron eigenvalue residual, defined here so we don't have to pass in 'self' in the rootfinder.
         # Might be worth testing for speed/performance.
+        # TODO: Get rid of this intermediate currying and alter scan_and_bracket accordingly for all instances.
         def eer(x):
             return electron_eigenvalue_residual(x, self)
 
