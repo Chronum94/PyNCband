@@ -67,7 +67,7 @@ def _heaviside(x1: float, x2: float) -> float:
 
 
 # @vectorize(nopython=True)
-@jit([float64(float64), float64(complex128)], nopython=True)
+@jit([float64(float64), float64(complex128)], nopython=True, cache=True)
 def _tanxdivx(x: floatcomplex) -> float:
     """A custom tan(x)/x function for complex purely real or purely imaginary x, stabilized around |x| = 0,
 
