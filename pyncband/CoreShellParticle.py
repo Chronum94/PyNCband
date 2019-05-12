@@ -692,9 +692,7 @@ class CoreShellParticle:
         return result
 
     def coulomb_screening_energy(
-        self,
-        relative_tolerance: float = 1e-5,
-        shell_term_denominator: float = 2.0
+        self, relative_tolerance: float = 1e-5, shell_term_denominator: float = 2.0
     ):
         """ Calculates the Coulomb screening energy. Somewhat slow.
 
@@ -717,7 +715,9 @@ class CoreShellParticle:
         2-array of floats: The Coulomb screening energy and error.
 
         """
-        coulomb_screening_operator = make_coulomb_screening_operator(self, shell_term_denominator=shell_term_denominator)
+        coulomb_screening_operator = make_coulomb_screening_operator(
+            self, shell_term_denominator=shell_term_denominator
+        )
         k_e, q_e, k_h, q_h = self.calculate_wavenumbers()
         norm_e, norm_h = self._normalization()
 
@@ -814,10 +814,7 @@ class CoreShellParticle:
         # print(whole_integral[0], sectioned_integral[0], trapzed)
         return sectioned_integral
 
-    def polarization_screening_energy(
-        self,
-        relative_tolerance: float = 1e-5
-    ):
+    def polarization_screening_energy(self, relative_tolerance: float = 1e-5):
         """
 
         Parameters

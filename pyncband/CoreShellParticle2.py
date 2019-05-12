@@ -85,7 +85,16 @@ class CoreShellParticle:
         self.DEFAULT_ELECTRON_ENERGY_SEARCH_RANGE_EV = 0.1
         self.DEFAULT_HOLE_ENERGY_SEARCH_RANGE_EV = 0.1
 
-    def calculate_s1_energies(self, resolution: int = None) -> np.ndarray:
+    def calculator_energy(
+        self,
+        core_width: float,
+        shell_width: float,
+        coulomb_interaction: bool = True,
+        polarization_interaction: bool = True,
+    ):
+        raise NotImplementedError
+
+    def calculate_s1_energies(self, core_width: float, shell_width: float, resolution: int = None) -> np.ndarray:
         """Calculates eigenenergies of the S1 exciton state in eV.
 
         This may be changed in future versions to calculate higher energy states.
@@ -126,9 +135,9 @@ class CoreShellParticle:
             return electron_eigenvalue_residual(x, self)
 
         while (
-                not electron_bracket_found
-                and current_electron_bracketing_attempt
-                <= self.MAX_ENERGY_BRACKETING_ATTEMPTS
+            not electron_bracket_found
+            and current_electron_bracketing_attempt
+            <= self.MAX_ENERGY_BRACKETING_ATTEMPTS
         ):
             (bracket_low, bracket_high), electron_bracket_found = scan_and_bracket(
                 eer, lower_bound_e, upper_bound_e, resolution
@@ -152,8 +161,8 @@ class CoreShellParticle:
             return hole_eigenvalue_residual(x, self)
 
         while (
-                not hole_bracket_found
-                and current_hole_bracketing_attempt <= self.MAX_ENERGY_BRACKETING_ATTEMPTS
+            not hole_bracket_found
+            and current_hole_bracketing_attempt <= self.MAX_ENERGY_BRACKETING_ATTEMPTS
         ):
             (bracket_low, bracket_high), hole_bracket_found = scan_and_bracket(
                 her, lower_bound_h, upper_bound_h, resolution
