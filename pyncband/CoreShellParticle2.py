@@ -14,10 +14,10 @@ from .physicsfunctions import *
 from .scaling import hbar_ev, m_e, wavenumber_nm_from_energy_ev
 from .utils import EnergyNotBracketedError, LocalizationNotPossibleError
 
-__all__ = ["CoreShellParticle"]
+__all__ = ["CoreShellParticle2"]
 
 
-class CoreShellParticle:
+class CoreShellParticle2:
     def __init__(
         self,
         core_material: Material,
@@ -46,20 +46,22 @@ class CoreShellParticle:
         self.cmat = core_material
         self.smat = shell_material
 
+        self.core_electron_potential_offset = 0 if core_material.cbe < shell_material.cbe else (core_material.cbe - shell_material.cbe)
+        self.shell_electron_potential_offset = 0 if shell_material.cbe < core_material.cbe else (shell_material.cbe - core_material.cbe)
+
+        self.core_hole_potential_offset = 0 if core_material.vbe > shell_material.vbe else -(
+                    core_material.vbe - shell_material.vbe)
+        self.shell_hole_potential_offset = 0 if shell_material.vbe > core_material.vbe else -(
+                    shell_material.vbe - core_material.vbe)
+
         # I'll see if we need to scale these here. If all our calculations use scaled lengths,
         # we can simply work with nanometers.
 
-        self.type_one, self.type_one_reverse = self._is_type_one()
-
-        # Need to refactor this method/
-        self.type_two, self.h_e, self.e_h = self._is_type_two()
         # This is an observer variable so we don't have to recalculate eigen-energies every time
         # unless core/shell dimensions change.
-        self.energies_valid: bool = False
-        self.s1_e, self.s1_h = None, None
+
 
         # Observer variable for normalization constant of wavefunction.
-        self.norm_valid: bool = False
         self.norm_e, self.norm_h = None, None
 
         # All these energies are in eV. All internal calculations are carried out in eV.
@@ -72,18 +74,6 @@ class CoreShellParticle:
 
         self.environment_epsilon = environment_epsilon
 
-        # This is used to refine the scanning of energies.
-        # For coreshells with massive disparities, the energy scan_and_bracket needs 'adaptive' refinement.
-
-        # TODO: Remove this/turn this into a runtime method.
-        self.scan_refinement_multiplier = max(core_width, shell_width) / min(
-            core_width, shell_width
-        )
-
-        self.BASE_ENERGY_SCAN_RESOLUTION = 500
-        self.MAX_ENERGY_BRACKETING_ATTEMPTS = 500
-        self.DEFAULT_ELECTRON_ENERGY_SEARCH_RANGE_EV = 0.1
-        self.DEFAULT_HOLE_ENERGY_SEARCH_RANGE_EV = 0.1
 
     def calculator_energy(
         self,
@@ -111,77 +101,3 @@ class CoreShellParticle:
             The s1 state energies of electrons and holes.
 
         """
-
-        # This is a heuristic way to scan finer points for larger quantum dots since their energies are lower.
-        if resolution is None:
-            resolution = int(
-                self.BASE_ENERGY_SCAN_RESOLUTION * self.scan_refinement_multiplier
-            )
-
-        # _e for electrons, _h for holes.
-        lower_bound_e = 0
-        upper_bound_e = self.DEFAULT_ELECTRON_ENERGY_SEARCH_RANGE_EV
-        lower_bound_h = 0
-        upper_bound_h = self.DEFAULT_HOLE_ENERGY_SEARCH_RANGE_EV
-
-        # Energy brackets.
-        electron_bracket_found, hole_bracket_found = False, False
-        current_electron_bracketing_attempt, current_hole_bracketing_attempt = 0, 0
-
-        # Electron eigenvalue residual, defined here so we don't have to pass in 'self' in the rootfinder.
-        # Might be worth testing for speed/performance.
-        # TODO: Get rid of this intermediate currying and alter scan_and_bracket accordingly for all instances.
-        def eer(x):
-            return electron_eigenvalue_residual(x, self)
-
-        while (
-            not electron_bracket_found
-            and current_electron_bracketing_attempt
-            <= self.MAX_ENERGY_BRACKETING_ATTEMPTS
-        ):
-            (bracket_low, bracket_high), electron_bracket_found = scan_and_bracket(
-                eer, lower_bound_e, upper_bound_e, resolution
-            )
-            lower_bound_e += self.DEFAULT_ELECTRON_ENERGY_SEARCH_RANGE_EV
-            upper_bound_e += self.DEFAULT_ELECTRON_ENERGY_SEARCH_RANGE_EV
-            current_electron_bracketing_attempt += 1
-
-        if not electron_bracket_found:
-            raise EnergyNotBracketedError(
-                f"Energy was not bracketed after {self.MAX_ENERGY_BRACKETING_ATTEMPTS} scans "
-                f"increasing by {self.DEFAULT_ELECTRON_ENERGY_SEARCH_RANGE_EV} eV each. Consider "
-                "increaseing MAX_ENERGY_BRACKETING_ATTEMPTS or "
-                "DEFAULT_ELECTRON_ENERGY_SEARCH_RANGE_EV, or both."
-            )
-        # Use the bracket to find the root.
-        self.s1_e = brentq(eer, bracket_low, bracket_high)
-
-        # Hole eigenvalue residual.
-        def her(x):
-            return hole_eigenvalue_residual(x, self)
-
-        while (
-            not hole_bracket_found
-            and current_hole_bracketing_attempt <= self.MAX_ENERGY_BRACKETING_ATTEMPTS
-        ):
-            (bracket_low, bracket_high), hole_bracket_found = scan_and_bracket(
-                her, lower_bound_h, upper_bound_h, resolution
-            )
-            lower_bound_h += self.DEFAULT_HOLE_ENERGY_SEARCH_RANGE_EV
-            upper_bound_h += self.DEFAULT_HOLE_ENERGY_SEARCH_RANGE_EV
-            current_hole_bracketing_attempt += 1
-
-        if not hole_bracket_found:
-            raise EnergyNotBracketedError(
-                f"Energy was not bracketed after {self.MAX_ENERGY_BRACKETING_ATTEMPTS} scans "
-                f"increasing by {self.DEFAULT_HOLE_ENERGY_SEARCH_RANGE_EV} eV each. Consider "
-                "increaseing MAX_ENERGY_BRACKETING_ATTEMPTS or "
-                "DEFAULT_HOLE_ENERGY_SEARCH_RANGE_EV, or both."
-            )
-
-        # Use bracket, find root.
-        self.s1_h = brentq(her, bracket_low, bracket_high)
-
-        self.energies_valid = True
-
-        return np.array([self.s1_e, self.s1_h])
