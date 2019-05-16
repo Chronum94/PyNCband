@@ -84,16 +84,33 @@ class CoreShellParticle2:
     ):
         raise NotImplementedError
 
-    def calculate_s1_energies(self, core_width: float, shell_width: float, resolution: int = None) -> np.ndarray:
+    def _calculate_s1_energies(self, core_width: float, shell_width: float) -> np.ndarray:
         """Calculates eigenenergies of the S1 exciton state in eV.
 
         This may be changed in future versions to calculate higher energy states.
 
+        The s1 state energies are the roots of equation 2 in Ref 1.
+        To solve this equation,
+        1. replace kR=X and qH=Y.
+        2. If the state energy is less than the potential step at the core-shell interface
+        then the electron is localized in either the core/shell, depending on which side
+        has the potential step.
+        This means that the region where the electron wavefunction is evanescent will
+        have a purely imaginary size parameter.
+        An imaginary size parameter will not contribute to the asymptotic blow-up,
+        as val*cot(val) goes to inf due to val -> pi^-, since cot(val)
+        3. Find the wavenumber, and therefore the energy, where X becomes pi.
+        4. Find corresponding energy, given eff mass.
+        5. Bracket [0, above result), find root.
+
+        6. if the state energy is higher than the potenttial step, this means that X
+        (or Y, if the step is in the core) has got hit pi for an energy lower than
+        the potential step. Find the wavenumber, either k or q, such that X or Y hits pi.
+        Whichever hits pi first, as above, will control the first asymptotic behaviour
+        which we will use to bracket the first root.
+
         Parameters
         ----------
-
-        resolution : int
-            The number of points to use when scanning and bracketing.
 
         Returns
         -------
@@ -101,3 +118,5 @@ class CoreShellParticle2:
             The s1 state energies of electrons and holes.
 
         """
+
+def get_type(self, detailed: bool = False) -> str:
