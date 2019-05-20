@@ -3,6 +3,7 @@ from scipy.constants import Rydberg
 from pyncband import CoreShellParticle, CoreShellParticle2, Material
 from pyncband.constants import ev_to_hartree, hartree_to_ev
 
+from pyncband.physicsfunctions2 import e2k, k2e
 
 def test_base_coreshellparticle2():
     a, b = Material(1, -1, 1, 1, 1), Material(0.8, -0.6, 1, 1, 1)
@@ -23,6 +24,12 @@ def test_cs1_cs2_compat():
 
     assert np
 
+def test_energy_wavevector_conversion():
+    assert np.isclose(e2k(1, 1, 1), 0.0)
+    assert np.isclose(e2k(3, 1, 1), 2.0)
+    assert np.isclose(k2e(1, 1, 1), 1.5)
+    assert np.isclose(e2k(1, 1, 3), 2.0j)
+    assert np.isclose(k2e(2j, 1, 3), 5)
 
 def test_s1_energies():
     a, b = Material(1, -1, 1, 1, 1), Material(0.8, -0.6, 1, 1, 1)
@@ -33,7 +40,7 @@ def test_csp_csp2_answers_equal():
     """Tests that a old and new CSNCs offer equal answers.
 
     """
-    a = Material(2.0, 0.0, 1.0, 1.0, 1.0)
+    a = Material(2.0, 0.0, 1.02, 1.0, 1.0)
     b = Material(1.0, -0.5, 1.0, 1.0, 1.0)  # Lower band edges.
 
     core, shell = 1.0, 1.0

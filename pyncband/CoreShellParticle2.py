@@ -141,7 +141,7 @@ class CoreShellParticle2:
 
         # The size paramater at which the two x cot(x) terms diverge.
         k_bracket, q_bracket = np.pi / core_radius, np.pi / shell_thickness
-        print(k_bracket, q_bracket)
+        print( "K bracket:", k_bracket, "Q bracket:", q_bracket)
         print(self.core_electron_potential_offset, self.shell_electron_potential_offset * hartree_to_ev)
         print(self.core_hole_potential_offset, self.shell_hole_potential_offset * hartree_to_ev)
         # These are the energies which act as the nonzero brackets of our roots.
@@ -156,10 +156,11 @@ class CoreShellParticle2:
         )
 
         print("E bracket:", electron_bracket, "H bracket:", hole_bracket)
+
         electron_s1 = brentq(
             eigenvalue_residual,
             0.0,
-            electron_bracket - 1e-3,
+            electron_bracket - 1e-9,
             args=(
                 core_radius,
                 shell_thickness,
@@ -173,7 +174,7 @@ class CoreShellParticle2:
         hole_s1 = brentq(
             eigenvalue_residual,
             0.0,
-            hole_bracket - 1e-3,
+            hole_bracket - 1e-9,
             args=(
                 core_radius,
                 shell_thickness,

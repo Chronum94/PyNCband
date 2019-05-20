@@ -30,7 +30,7 @@ def e2k(e, m, potential_step):
     wavenumber: float, 1 / Bohr
 
     """
-    return np.sqrt(2 * m * (e - potential_step) + 0j)
+    return np.sqrt(2 * m * (e - potential_step) + 0.0j)
 
 
 def k2e(k, m, potential_step):
@@ -120,6 +120,7 @@ def eigenvalue_residual(
 
     core_wavenumber = e2k(energy, core_eff_mass, core_potential_step)
     shell_wavenumber = e2k(energy, shell_eff_mass, shell_potential_step)
+
     core_x = core_wavenumber * core_radius
     shell_x = shell_wavenumber * shell_thickness
     mass_ratio = shell_eff_mass / core_eff_mass
