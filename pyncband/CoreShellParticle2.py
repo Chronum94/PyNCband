@@ -46,35 +46,38 @@ class CoreShellParticle2:
         self.cmat = core_material
         self.smat = shell_material
 
-        self.core_electron_potential_offset = (
-            0.0
-            if core_material.cbe < shell_material.cbe
-            else (core_material.cbe - shell_material.cbe) * ev_to_hartree
-        )
-        self.shell_electron_potential_offset = (
-            0.0
-            if shell_material.cbe < core_material.cbe
-            else (shell_material.cbe - core_material.cbe) * ev_to_hartree
-        )
-
-        self.core_hole_potential_offset = (
-            0.0
-            if core_material.vbe > shell_material.vbe
-            else -(core_material.vbe - shell_material.vbe) * ev_to_hartree
-        )
-        self.shell_hole_potential_offset = (
-            0.0
-            if shell_material.vbe > core_material.vbe
-            else -(shell_material.vbe - core_material.vbe) * ev_to_hartree
-        )
-
-        # I'll see if we need to scale these here. If all our calculations use scaled lengths,
-        # we can simply work with nanometers.
+        """We reference all energy levels at 0, and all energy steps are positive wrt that level.
+        Example: If the core material's conduction band is below (more negative) than the valence material,
+        The core material's condcution band edge is the reference energy set to 0. Switch signs to get hole energy
+        alignments."""
 
         # All these energies are in Hartrees. All internal calculations are carried out in Hartrees.
         self.ue = np.abs(self.cmat.cbe - self.smat.cbe) * ev_to_hartree
         self.uh = np.abs(self.cmat.vbe - self.smat.vbe) * ev_to_hartree
 
+        self.core_electron_potential_offset = (
+            0.0
+            if core_material.cbe < shell_material.cbe
+            else self.ue
+        )
+        self.shell_electron_potential_offset = (
+            0.0
+            if shell_material.cbe < core_material.cbe
+            else self.ue
+        )
+
+        self.core_hole_potential_offset = (
+            0.0
+            if core_material.vbe > shell_material.vbe
+            else self.uh
+        )
+        self.shell_hole_potential_offset = (
+            0.0
+            if shell_material.vbe > core_material.vbe
+            else self.uh
+        )
+
+        # Spatially indirect bandgap.
         self.bandgap = (
             min(self.cmat.cbe, self.smat.cbe) - max(self.cmat.vbe, self.smat.vbe)
         ) * ev_to_hartree
@@ -94,40 +97,6 @@ class CoreShellParticle2:
         self, core_radius: float, shell_thickness: float
     ) -> np.ndarray:
         """Calculates eigenenergies of the S1 exciton state in eV.
-
-        This may be changed in future versions to calculate higher energy states.
-
-        The s1 state energies are the roots of equation 2 in Ref 1.
-        To solve this equation, take the RHS to the LHS
-        to represent as f(k(e), q(e)) = 0 then
-        1. replace kR=X and qH=Y.
-        2. Notice that the equation now goes from negative to positive
-        (plot it as a function of energy!) similar to a -x*cot(x), with some
-        irregularities. At each asymptote, one of these two cots' arguments, X or Y,
-        is hitting pi. That's why you have the x*cot(x) blowing up, and dominating
-        the behaviour of the equation at those points. This behaviour is really
-        useful, since the first asymptotic explosion will act as our upper bracket
-        for the root-finding of the energy.
-
-        2. If the state energy is less than the potential step at the core-shell interface
-        then the electron is localized in either the core/shell, depending on which side
-        has the potential step.
-        The region where the electron wavefunction is evanescent will
-        have a purely imaginary size parameter.
-        An imaginary size parameter will not contribute to the asymptotic blow-up,
-        as val*cot(val) goes to inf due to val -> pi^-, since cot(val) does not blow
-        up for imaginary val.
-
-        3. Find the wavenumber, and therefore the energy, where X (or Y, if
-        the step is in the core) becomes pi.
-        4. Find corresponding energy, given eff mass.
-        5. Bracket [0, above result), find root.
-
-        6. If the state energy is higher than the potenttial step, this means that X
-        (or Y, if the step is in the core) has not hit pi for an energy lower than
-        the potential step. Find the wavenumber, either k or q, such that X or Y hits pi.
-        Whichever hits pi first, as above, will control the first asymptotic behaviour.
-        We will use to bracket the first root, and solve.
 
         Parameters
         ----------
