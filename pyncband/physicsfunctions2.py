@@ -130,3 +130,50 @@ def eigenvalue_residual(
         - 1.0
         - 1.0 / _tanxdivx(shell_x) * core_radius / shell_thickness
     )
+
+@jit(nopython=True)
+def _unnormalized_core_wavefunction(
+    x: float, k: floatcomplex, core_width: float
+) -> floatcomplex:
+    """Returns the value of the S-n pherically symmetric wavefunction in the core.
+
+    Depending on the values of the wavenumber k, will return the radial component of the solution for Schrodinger's
+    equation in the core of the semiconductor nanocrystal. Typically used for the lowest k to give the S1 wavefunction
+    values.
+
+    Parameters
+    ----------
+    x : float, nanometers
+        The position at which to evaluate the wavefunction.
+
+    k : float, purely real or purely imaginary, 1 / nm
+        The wavenumber/momentum of the particle, purely real or purely imaginary.
+
+    core_width : float, nanometers
+        The core width of the core-shell quantum dot.
+
+    Returns
+    -------
+    val : float
+        The value of the wavefunction at the point x.
+
+    References
+    ----------
+    .. [1] Piryatinski, A., Ivanov, S. A., Tretiak, S., & Klimov, V. I. (2007). Effect of Quantum and Dielectric \
+    Confinement on the Exciton−Exciton Interaction Energy in Type II Core/Shell Semiconductor Nanocrystals. \
+    Nano Letters, 7(1), 108–115. https://doi.org/10.1021/nl0622404
+
+    """
+    denom = np.sin(core_width * k)
+
+    # The branch is for numerical stability near x = 0.
+    if abs(x) < 1e-8:
+        val = k / denom
+    else:
+        val = np.sin(k * x) / (x * denom)
+    return val
+
+
+unnormalized_core_wavefunction = np.vectorize(
+    _unnormalized_core_wavefunction, otypes=(np.complex128,)
+)

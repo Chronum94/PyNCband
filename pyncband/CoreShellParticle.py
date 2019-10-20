@@ -266,6 +266,7 @@ class CoreShellParticle:
                 "DEFAULT_ELECTRON_ENERGY_SEARCH_RANGE_EV, or both."
             )
         # Use the bracket to find the root.
+        print('EER energy bracket:', bracket_low, bracket_high)
         self.s1_e = brentq(eer, bracket_low, bracket_high)
 
         # Hole eigenvalue residual.
@@ -292,6 +293,7 @@ class CoreShellParticle:
             )
 
         # Use bracket, find root.
+        print('HER energy bracket:', bracket_low, bracket_high)
         self.s1_h = brentq(her, bracket_low, bracket_high)
 
         self.energies_valid = True
