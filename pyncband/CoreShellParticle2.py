@@ -173,28 +173,33 @@ class CoreShellParticle2:
                              e2k(hole_s1, self.smat.m_h, self.shell_hole_potential_offset)
 
         import matplotlib.pyplot as plt
-        x, dx = np.linspace(0, core_radius + shell_thickness, 1000, retstep = True)
+        x, dx = np.linspace(1e-15, core_radius + shell_thickness, 1000, retstep = True)
         electron_wavefunction = np.zeros_like(x)
         hole_wavefunction = np.zeros_like(x)
 
+        # Array indices of core and shell regions.
         core_x, shell_x = x < core_radius, np.bitwise_and(core_radius <= x, x < core_radius + shell_thickness)
 
-        electron_wavefunction[core_x] = np.sin(x[core_x] * k_electron) / (x[core_x] * np.sin(k_electron * core_radius))
-        electron_wavefunction[shell_x] = np.sin((core_radius + shell_thickness - x[shell_x]) * q_electron) / (x[shell_x] * np.sin(q_electron * shell_thickness))
+        # Building the electron and hole radial wavefunctions.
+        electron_wavefunction[core_x] = (np.sin(x[core_x] * k_electron) / (x[core_x] * np.sin(k_electron * core_radius))).real
+        electron_wavefunction[shell_x] = (np.sin((core_radius + shell_thickness - x[shell_x]) * q_electron) / (x[shell_x] * np.sin(q_electron * shell_thickness))).real
 
-        hole_wavefunction[core_x] = np.sin(x[core_x] * k_hole) / (x[core_x] * np.sin(k_hole * core_radius))
-        hole_wavefunction[shell_x] = np.sin((core_radius + shell_thickness - x[shell_x]) * q_hole) / (
-                    x[shell_x] * np.sin(q_hole * shell_thickness))
+        hole_wavefunction[core_x] = (np.sin(x[core_x] * k_hole) / (x[core_x] * np.sin(k_hole * core_radius))).real
+        hole_wavefunction[shell_x] = (np.sin((core_radius + shell_thickness - x[shell_x]) * q_hole) / (
+                    x[shell_x] * np.sin(q_hole * shell_thickness))).real
 
-
+        # A uniform grid of masses for the mass-weighted derivatives.
+        electron_mass_grid = np.where(x < core_radius, self.cmat.m_e, self.smat.m_e)
+        hole_mass_grid = np.where(x < core_radius, self.cmat.m_h, self.smat.m_h)
 
         plt.plot(x, electron_wavefunction.real)
         plt.plot(x, hole_wavefunction.real)
 
-        plt.plot(x, np.gradient(electron_wavefunction.real, dx))
-        plt.plot(x, np.gradient(hole_wavefunction.real, dx))
+        plt.plot(x, np.gradient(electron_wavefunction.real, dx) / electron_mass_grid)
+        plt.plot(x, np.gradient(hole_wavefunction.real, dx) / hole_mass_grid)
 
-        plt.vlines([core_radius, core_radius + shell_thickness], 0, 1)
+        plt.vlines([core_radius, core_radius + shell_thickness], 0, np.max(electron_wavefunction.real))
+        # plt.xlim(core_radius - 3 * dx, core_radius + 3 * dx)
         plt.show()
 
 
