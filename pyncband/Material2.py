@@ -42,13 +42,13 @@ class Material2:
 
         """
 
-        self.bandgap = bandgap * eV
+        self.bandgap = bandgap
 
-        self.cbe = conduction_band_edge * eV
-        self.vbe = (conduction_band_edge - bandgap) * eV
+        self.cbe = conduction_band_edge
+        self.vbe = (conduction_band_edge - bandgap)
 
-        self.m_e: float = electron_eff_mass * emass
-        self.m_h: float = hole_eff_mass * emass
+        self.m_e: float = electron_eff_mass
+        self.m_h: float = hole_eff_mass
         self.eps: float = epsilon
         if name is not None:
             self.name: str = name

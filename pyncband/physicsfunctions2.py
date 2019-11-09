@@ -1,6 +1,5 @@
 import numpy as np
 from math import tan
-
 from numba import jit, float64, complex128
 
 from typing import Callable, Union, TYPE_CHECKING, Tuple

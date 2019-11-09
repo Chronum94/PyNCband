@@ -53,9 +53,9 @@ class CoreShellParticle2:
         alignments."""
 
         # All these energies are in Hartree. All internal calculations are carried out in Hartree.
-        print(np.abs(self.cmat.vbe - self.smat.vbe))
-        self.ue = np.abs(self.cmat.cbe - self.smat.cbe).to(Hartree)
-        self.uh = np.abs(self.cmat.vbe - self.smat.vbe).to(Hartree)
+        # print(np.abs(self.cmat.vbe - self.smat.vbe))
+        self.ue = np.abs(self.cmat.cbe - self.smat.cbe)
+        self.uh = np.abs(self.cmat.vbe - self.smat.vbe)
 
         self.core_electron_potential_offset = (
             0.0
@@ -73,6 +73,7 @@ class CoreShellParticle2:
             if core_material.vbe > shell_material.vbe
             else self.uh
         )
+        print('T', self.shell_electron_potential_offset)
         self.shell_hole_potential_offset = (
             0.0
             if shell_material.vbe > core_material.vbe
@@ -80,9 +81,8 @@ class CoreShellParticle2:
         )
 
         # Spatially indirect bandgap.
-        self.bandgap = (
-            ((np.min([self.cmat.cbe, self.smat.cbe]) - np.max([self.cmat.vbe, self.smat.vbe])) * eV).to(Hartree))
-
+        self.bandgap = np.min([self.cmat.cbe, self.smat.cbe]) - np.max([self.cmat.vbe, self.smat.vbe])
+        print(self.bandgap)
         self.environment_epsilon = environment_epsilon
 
     def calculator_energy(
@@ -119,10 +119,10 @@ class CoreShellParticle2:
         """
 
         # The size paramater at which the two x cot(x) terms diverge.
-        k_bracket, q_bracket = np.pi / (core_radius * nm).to(Bohr), np.pi / (shell_thickness * nm).to(Bohr)
+        k_bracket, q_bracket = np.pi / core_radius, np.pi / shell_thickness
         print("K bracket:", k_bracket, "Q bracket:", q_bracket)
-        print(self.core_electron_potential_offset, self.shell_electron_potential_offset)
-        print(self.core_hole_potential_offset, self.shell_hole_potential_offset)
+        # print(self.core_electron_potential_offset, self.shell_electron_potential_offset)
+        # print(self.core_hole_potential_offset, self.shell_hole_potential_offset)
         # These are the energies which act as the nonzero brackets of our roots.
         electron_bracket = min(
             k2e(k_bracket, self.cmat.m_e, self.core_electron_potential_offset),
@@ -165,6 +165,37 @@ class CoreShellParticle2:
         )
 
         return np.array([electron_s1, hole_s1])
+
+    def _plot_wf(self, electron_s1, hole_s1, core_radius, shell_thickness):
+        k_electron, k_hole = e2k(electron_s1, self.cmat.m_e, self.core_electron_potential_offset), \
+                             e2k(hole_s1, self.cmat.m_h, self.core_hole_potential_offset)
+        q_electron, q_hole = e2k(electron_s1, self.smat.m_e, self.shell_electron_potential_offset),\
+                             e2k(hole_s1, self.smat.m_h, self.shell_hole_potential_offset)
+
+        import matplotlib.pyplot as plt
+        x, dx = np.linspace(0, core_radius + shell_thickness, 1000, retstep = True)
+        electron_wavefunction = np.zeros_like(x)
+        hole_wavefunction = np.zeros_like(x)
+
+        core_x, shell_x = x < core_radius, np.bitwise_and(core_radius <= x, x < core_radius + shell_thickness)
+
+        electron_wavefunction[core_x] = np.sin(x[core_x] * k_electron) / (x[core_x] * np.sin(k_electron * core_radius))
+        electron_wavefunction[shell_x] = np.sin((core_radius + shell_thickness - x[shell_x]) * q_electron) / (x[shell_x] * np.sin(q_electron * shell_thickness))
+
+        hole_wavefunction[core_x] = np.sin(x[core_x] * k_hole) / (x[core_x] * np.sin(k_hole * core_radius))
+        hole_wavefunction[shell_x] = np.sin((core_radius + shell_thickness - x[shell_x]) * q_hole) / (
+                    x[shell_x] * np.sin(q_hole * shell_thickness))
+
+
+
+        plt.plot(x, electron_wavefunction.real)
+        plt.plot(x, hole_wavefunction.real)
+
+        plt.plot(x, np.gradient(electron_wavefunction.real, dx))
+        plt.plot(x, np.gradient(hole_wavefunction.real, dx))
+
+        plt.vlines([core_radius, core_radius + shell_thickness], 0, 1)
+        plt.show()
 
 
 def get_type(self, detailed: bool = False) -> str:
