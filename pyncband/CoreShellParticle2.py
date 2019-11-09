@@ -73,7 +73,6 @@ class CoreShellParticle2:
             if core_material.vbe > shell_material.vbe
             else self.uh
         )
-        print('T', self.shell_electron_potential_offset)
         self.shell_hole_potential_offset = (
             0.0
             if shell_material.vbe > core_material.vbe
@@ -183,20 +182,21 @@ class CoreShellParticle2:
         # Building the electron and hole radial wavefunctions.
         electron_wavefunction[core_x] = (np.sin(x[core_x] * k_electron) / (x[core_x] * np.sin(k_electron * core_radius))).real
         electron_wavefunction[shell_x] = (np.sin((core_radius + shell_thickness - x[shell_x]) * q_electron) / (x[shell_x] * np.sin(q_electron * shell_thickness))).real
+        electron_wavefunction /= np.sum(electron_wavefunction) * dx
 
         hole_wavefunction[core_x] = (np.sin(x[core_x] * k_hole) / (x[core_x] * np.sin(k_hole * core_radius))).real
         hole_wavefunction[shell_x] = (np.sin((core_radius + shell_thickness - x[shell_x]) * q_hole) / (
                     x[shell_x] * np.sin(q_hole * shell_thickness))).real
-
+        hole_wavefunction /= np.sum(hole_wavefunction) * dx
         # A uniform grid of masses for the mass-weighted derivatives.
         electron_mass_grid = np.where(x < core_radius, self.cmat.m_e, self.smat.m_e)
         hole_mass_grid = np.where(x < core_radius, self.cmat.m_h, self.smat.m_h)
+        print(np.sum(electron_wavefunction) * dx)
+        plt.plot(x, electron_wavefunction)
+        plt.plot(x, hole_wavefunction)
 
-        plt.plot(x, electron_wavefunction.real)
-        plt.plot(x, hole_wavefunction.real)
-
-        plt.plot(x, np.gradient(electron_wavefunction.real, dx) / electron_mass_grid)
-        plt.plot(x, np.gradient(hole_wavefunction.real, dx) / hole_mass_grid)
+        plt.plot(x, np.gradient(electron_wavefunction.real, dx) / electron_mass_grid, 'C0--')
+        plt.plot(x, np.gradient(hole_wavefunction.real, dx) / hole_mass_grid, 'C1--')
 
         plt.vlines([core_radius, core_radius + shell_thickness], 0, np.max(electron_wavefunction.real))
         # plt.xlim(core_radius - 3 * dx, core_radius + 3 * dx)
