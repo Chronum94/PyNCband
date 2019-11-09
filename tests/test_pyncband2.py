@@ -12,8 +12,9 @@ from pyncband.physicsfunctions2 import e2k, k2e
 def test_energy_momentum_conversions():
     energy = 1.0
     momentum = e2k(energy, 1, 0)
-    assert np.isclose(momentum, 2**0.5)
+    assert np.isclose(momentum, 2 ** 0.5)
     assert np.isclose(k2e(momentum, 1, 0), energy)
+
 
 # def test_type_two_and_he():
 #     """Tests for CSNC type-2 and h/e structure.

@@ -45,7 +45,7 @@ class Material2:
         self.bandgap = bandgap
 
         self.cbe = conduction_band_edge
-        self.vbe = (conduction_band_edge - bandgap)
+        self.vbe = conduction_band_edge - bandgap
 
         self.m_e: float = electron_eff_mass
         self.m_h: float = hole_eff_mass

@@ -6,7 +6,7 @@ ur = p.UnitRegistry()
 
 emass = ur.electron_mass
 
-eV = ur. eV
+eV = ur.eV
 Hartree = 27.21138602 * ur.eV
 
 nm = ur.nm

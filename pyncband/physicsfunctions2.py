@@ -125,15 +125,12 @@ def eigenvalue_residual(
     mass_ratio = shell_eff_mass / core_eff_mass
 
     return np.real(
-        (1.0 - 1.0 / _tanxdivx(core_x)) * mass_ratio
-        - 1.0
-        - 1.0 / _tanxdivx(shell_x) * core_radius / shell_thickness
+        (1.0 - 1.0 / _tanxdivx(core_x)) * mass_ratio - 1.0 - 1.0 / _tanxdivx(shell_x) * core_radius / shell_thickness
     )
 
+
 @jit(nopython=True)
-def _unnormalized_core_wavefunction(
-    x: float, k: floatcomplex, core_width: float
-) -> floatcomplex:
+def _unnormalized_core_wavefunction(x: float, k: floatcomplex, core_width: float) -> floatcomplex:
     """Returns the value of the S-n pherically symmetric wavefunction in the core.
 
     Depending on the values of the wavenumber k, will return the radial component of the solution for Schrodinger's
@@ -173,6 +170,4 @@ def _unnormalized_core_wavefunction(
     return val
 
 
-unnormalized_core_wavefunction = np.vectorize(
-    _unnormalized_core_wavefunction, otypes=(np.complex128,)
-)
+unnormalized_core_wavefunction = np.vectorize(_unnormalized_core_wavefunction, otypes=(np.complex128,))
