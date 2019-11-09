@@ -188,53 +188,57 @@ class CoreShellParticle2:
         hole_mass_grid = np.where(x < core_radius, self.cmat.m_h, self.smat.m_h)
         print(np.sum(electron_wavefunction) * dx)
         print(np.sum(hole_wavefunction) * dx)
-        assert np.isclose(np.sum(electron_wavefunction) * dx, 1), "Electron wavefunction is not normalized! This should NOT happen here!"
-        assert np.isclose(np.sum(hole_wavefunction) * dx, 1), "Hole wavefunction is not normalized! This should NOT happen here!"
+        assert np.isclose(
+            np.sum(electron_wavefunction) * dx, 1
+        ), "Electron wavefunction is not normalized! This should NOT happen here!"
+        assert np.isclose(
+            np.sum(hole_wavefunction) * dx, 1
+        ), "Hole wavefunction is not normalized! This should NOT happen here!"
 
-        fig, ax= plt.subplots(1, 2, figsize = (10, 5))
-        ax[0].set_title('Wavefunction')
-        ax[1].set_title('Mass-weighted wavefunction derivative')
-
-
+        fig, ax = plt.subplots(1, 2, figsize=(10, 5))
+        ax[0].set_title("Wavefunction")
+        ax[1].set_title("Mass-weighted wavefunction derivative")
 
         ax[0].plot(x, electron_wavefunction)
         ax[0].plot(x, hole_wavefunction)
 
-
-        electron_mass_weighted_wavefunction_derivative[core_x] = k_electron * np.cos(k_electron * x[core_x]) / (np.sin(k_electron * core_radius) * x[core_x]) \
-        - np.sin(k_electron * x[core_x]) / (np.sin(core_radius * k_electron) * x[core_x] ** 2)
-        electron_mass_weighted_wavefunction_derivative[shell_x] = - q_electron * np.cos(q_electron * (- x[shell_x] + core_radius + shell_thickness)) / (
-                    np.sin(q_electron * shell_thickness) * x[shell_x]) \
-                                                                 - np.sin(q_electron * (- x[shell_x] + core_radius + shell_thickness)) / (
-                                                                             np.sin(shell_thickness * q_electron) * x[
-                                                                         shell_x] ** 2)
+        electron_mass_weighted_wavefunction_derivative[core_x] = k_electron * np.cos(k_electron * x[core_x]) / (
+            np.sin(k_electron * core_radius) * x[core_x]
+        ) - np.sin(k_electron * x[core_x]) / (np.sin(core_radius * k_electron) * x[core_x] ** 2)
+        electron_mass_weighted_wavefunction_derivative[shell_x] = -q_electron * np.cos(
+            q_electron * (-x[shell_x] + core_radius + shell_thickness)
+        ) / (np.sin(q_electron * shell_thickness) * x[shell_x]) - np.sin(
+            q_electron * (-x[shell_x] + core_radius + shell_thickness)
+        ) / (
+            np.sin(shell_thickness * q_electron) * x[shell_x] ** 2
+        )
 
         electron_mass_weighted_wavefunction_derivative = electron_mass_weighted_wavefunction_derivative.real
 
         hole_mass_weighted_wavefunction_derivative[core_x] = k_hole * np.cos(k_hole * x[core_x]) / (
-                    np.sin(k_hole * core_radius) * x[core_x]) \
-                                                                 - np.sin(k_hole * x[core_x]) / (
-                                                                             np.sin(core_radius * k_hole) * x[
-                                                                         core_x] ** 2)
-        hole_mass_weighted_wavefunction_derivative[shell_x] = - q_hole * np.cos(
-            q_hole * (- x[shell_x] + core_radius + shell_thickness)) / (
-                                                                          np.sin(q_hole * shell_thickness) * x[
-                                                                      shell_x]) \
-                                                                  - np.sin(
-            q_hole * (- x[shell_x] + core_radius + shell_thickness)) / (
-                                                                          np.sin(shell_thickness * q_hole) * x[
-                                                                      shell_x] ** 2)
+            np.sin(k_hole * core_radius) * x[core_x]
+        ) - np.sin(k_hole * x[core_x]) / (np.sin(core_radius * k_hole) * x[core_x] ** 2)
+        hole_mass_weighted_wavefunction_derivative[shell_x] = -q_hole * np.cos(
+            q_hole * (-x[shell_x] + core_radius + shell_thickness)
+        ) / (np.sin(q_hole * shell_thickness) * x[shell_x]) - np.sin(
+            q_hole * (-x[shell_x] + core_radius + shell_thickness)
+        ) / (
+            np.sin(shell_thickness * q_hole) * x[shell_x] ** 2
+        )
 
         hole_mass_weighted_wavefunction_derivative = hole_mass_weighted_wavefunction_derivative.real
 
-
-
-        ax[1].plot(x, electron_mass_weighted_wavefunction_derivative * electron_wavefunction_normalization_constant / electron_mass_grid, "C1--", lw=4)
-        ax[1].plot(x, np.gradient(electron_wavefunction, dx) / electron_mass_grid, "C0-")
-        ax[1].plot(x,
-                   hole_mass_weighted_wavefunction_derivative * hole_wavefunction_normalization_constant / hole_mass_grid,
-                   "C1--", lw=4)
-        ax[1].plot(x, np.gradient(hole_wavefunction, dx) / hole_mass_grid, "C0-")
+        ax[1].plot(
+            x,
+            electron_mass_weighted_wavefunction_derivative
+            * electron_wavefunction_normalization_constant
+            / electron_mass_grid,
+        )
+        # ax[1].plot(x, np.gradient(electron_wavefunction, dx) / electron_mass_grid, "C0-")
+        ax[1].plot(
+            x, hole_mass_weighted_wavefunction_derivative * hole_wavefunction_normalization_constant / hole_mass_grid
+        )
+        # ax[1].plot(x, np.gradient(hole_wavefunction, dx) / hole_mass_grid, "C0-")
 
         # plt.vlines([core_radius, core_radius + shell_thickness], 0, np.max(electron_wavefunction.real))
         # plt.xlim(core_radius - 3 * dx, core_radius + 3 * dx)

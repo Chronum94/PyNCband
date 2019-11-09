@@ -130,7 +130,7 @@ def eigenvalue_residual(
 
 
 @jit(nopython=True)
-def _unnormalized_core_wavefunction(x: float, k: floatcomplex, core_width: float) -> floatcomplex:
+def _core_wavefunction(x: float, k: floatcomplex, core_radius: float) -> floatcomplex:
     """Returns the value of the S-n pherically symmetric wavefunction in the core.
 
     Depending on the values of the wavenumber k, will return the radial component of the solution for Schrodinger's
@@ -139,13 +139,13 @@ def _unnormalized_core_wavefunction(x: float, k: floatcomplex, core_width: float
 
     Parameters
     ----------
-    x : float, nanometers
+    x : float, bohr
         The position at which to evaluate the wavefunction.
 
-    k : float, purely real or purely imaginary, 1 / nm
+    k : float, purely real or purely imaginary, 1 / bohr
         The wavenumber/momentum of the particle, purely real or purely imaginary.
 
-    core_width : float, nanometers
+    core_radius : float, bohr
         The core width of the core-shell quantum dot.
 
     Returns
@@ -160,7 +160,7 @@ def _unnormalized_core_wavefunction(x: float, k: floatcomplex, core_width: float
     Nano Letters, 7(1), 108–115. https://doi.org/10.1021/nl0622404
 
     """
-    denom = np.sin(core_width * k)
+    denom = np.sin(core_radius * k)
 
     # The branch is for numerical stability near x = 0.
     if abs(x) < 1e-8:
@@ -169,5 +169,89 @@ def _unnormalized_core_wavefunction(x: float, k: floatcomplex, core_width: float
         val = np.sin(k * x) / (x * denom)
     return val
 
+# core_wavefunction = np.vectorize(_unnormalized_core_wavefunction, otypes=(np.complex128,))
 
-unnormalized_core_wavefunction = np.vectorize(_unnormalized_core_wavefunction, otypes=(np.complex128,))
+@jit(nopython=True)
+def _shell_wavefunction(x: float, q: floatcomplex, core_radius: float, shell_thickness: float) -> floatcomplex:
+    """Returns the value of the S1 spherically symmetric wavefunction in the shell.
+
+    Depending on the values of the wavenumber q, will return the radial component of the solution for Schrodinger's
+    equation in the shell of the semiconductor nanocrystal. Typically used for the lowest q to give the S1 wavefunction
+    values.
+
+    Parameters
+    ----------
+    x : float, bohr
+        The position at which to evaluate the wavefunction.
+
+    q : float, purely real or purely imaginary, 1 / bohr
+        The wavenumber/momentum of the particle.
+
+    core_radius : float, bohr
+        The core width of the core-shell quantum dot.
+
+    shell_thickness : float, bohr
+        The shell thickness of the core-shell quantum dot.
+
+    Returns
+    -------
+    val : float
+        The value of the wavefunction at the point x.
+
+    References
+    ----------
+    .. [1] Piryatinski, A., Ivanov, S. A., Tretiak, S., & Klimov, V. I. (2007). Effect of Quantum and Dielectric \
+    Confinement on the Exciton−Exciton Interaction Energy in Type II Core/Shell Semiconductor Nanocrystals. \
+    Nano Letters, 7(1), 108–115. https://doi.org/10.1021/nl0622404
+
+    """
+    # This doesn't need the numerical stability shenanigans because we aren't evaluating it at x = 0.
+    # But sin(q * shell_width) can still go to 0, technically. This may not happen because of how q is constrained.
+    # Needs testing.
+    return np.sin(q * (core_radius + shell_thickness - x)) / (x * np.sin(q * shell_thickness))
+
+
+@jit(nopython=True)
+def _wavefunction(
+    x: float, core_wavenumber: floatcomplex, shell_wavenumber: floatcomplex, core_radius: float, shell_thickness: float
+) -> floatcomplex:
+    """Evaluates the radially symmetric wavefunction values of the core-shell semiconductor nanocrystal at given point.
+
+    A simple wrapper that calls either _core_wavefunction or _shell_wavefunction with core
+    wavenumber `k` or shell wavenumber `q`. The `core_radius` and `shell_thickness` variables are obvious.
+
+    Parameters
+    ----------
+
+    x : float, bohr
+        The radial point at which to evaluate the wavefunction. x can be 0, since the core wavefunction has been
+        numerically stabilized at 0.
+
+    core_wavenumber : complex, 1 / bohr
+        The (potentially) complex wavevector of the electron/hole in the core of the core-shell particle.
+
+    shell_wavenumber : complex, 1 / bohr
+        The (potentially) complex wavevector of the electron/hole in the shell of the core-shell particle.
+
+    core_radius : float, bohr
+        The real-valued width of the core of the nanoparticle.
+
+    shell_thickness : float, bohr
+        The real-valued width of the shell of the nanoparticle.
+
+    References
+    ----------
+    .. [1] Piryatinski, A., Ivanov, S. A., Tretiak, S., & Klimov, V. I. (2007). Effect of Quantum and Dielectric
+        Confinement on the Exciton−Exciton Interaction Energy in Type II Core/Shell Semiconductor Nanocrystals.
+        Nano Letters, 7(1), 108–115. https://doi.org/10.1021/nl0622404
+
+    """
+
+    particle_radius = core_radius + shell_thickness
+
+    if 0 <= x < core_radius:
+        return _core_wavefunction(x, core_wavenumber, core_radius)
+    elif core_radius <= x < particle_radius:
+        return _shell_wavefunction(x, shell_wavenumber, core_radius, shell_thickness)
+    else:
+        return 0
