@@ -9,5 +9,11 @@ setup(
     author="Anubhab Haldar",
     author_email="",
     description="A 1st-order quantum dot bandgap calculator",
-    install_requires=["matplotlib>=2.0.0", "numpy>=1.14.5", "numba>=0.39.0", "scipy>=1.1.0", "typing>=3.6.4"],
+    install_requires=[
+        "matplotlib>=2.0.0",
+        "numpy>=1.14.5",
+        "numba>=0.39.0",
+        "scipy>=1.1.0",
+        "typing>=3.6.4",
+    ],
 )

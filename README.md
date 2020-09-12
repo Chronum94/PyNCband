@@ -1,4 +1,5 @@
 # PyNCband
+!! This tutorial is outdated. The code still works, absolutely. But I'm working on an improved version 2, with multiprocessing and general performance enhancements. !!
 
 PyNCband (pronounced pink-band) is a software suite in its _very_ early stages of development to predict the bandgaps and photoluminescence energies of core-shell (for now) quantum dots.
 
@@ -70,3 +71,7 @@ print("NC bandgap:", csnc.bandgap)
 # The excitation energy of the 1S exciton.
 print("Net 1S energy:", csnc.bandgap + np.sum(energies) + col_energy[0] + pol_energy[0])
 ```
+
+# Version 2.0: WIP
+
+1. Energies are in units of deciHartrees, distances are in decaBohrs.

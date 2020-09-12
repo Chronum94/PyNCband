@@ -325,7 +325,11 @@ class CoreShellParticle:
 
         """
         plt.hlines([self.cmat.vbe, self.cmat.cbe], xmin=0, xmax=self.core_width)
-        plt.hlines([self.smat.vbe, self.smat.cbe], xmin=self.core_width, xmax=self.core_width + self.shell_width)
+        plt.hlines(
+            [self.smat.vbe, self.smat.cbe],
+            xmin=self.core_width,
+            xmax=self.core_width + self.shell_width,
+        )
         lcbe, hcbe = sorted([self.cmat.cbe, self.smat.cbe])
         lvbe, hvbe = sorted([self.cmat.vbe, self.smat.vbe])
         plt.vlines(self.core_width, ymin=lcbe, ymax=hcbe)
@@ -433,7 +437,10 @@ class CoreShellParticle:
             mass_ratio_coreshell = self.cmat.m_e / self.smat.m_e
 
             minimum_size_parameter: float = brentq(
-                minimum_core_localization_size_parameter, 0, np.pi - 1e-8, args=(self.cmat.m_e, self.smat.m_e)
+                minimum_core_localization_size_parameter,
+                0,
+                np.pi - 1e-8,
+                args=(self.cmat.m_e, self.smat.m_e),
             )
 
             threshold_core_wavenumber = (
@@ -533,7 +540,10 @@ class CoreShellParticle:
             mass_ratio_coreshell = self.cmat.m_h / self.smat.m_h
 
             minimum_size_parameter: float = brentq(
-                minimum_core_localization_size_parameter, 0, np.pi - 1e-10, args=(self.cmat.m_h, self.smat.m_h)
+                minimum_core_localization_size_parameter,
+                0,
+                np.pi - 1e-10,
+                args=(self.cmat.m_h, self.smat.m_h),
             )
 
             theshold_core_wavenumber = (
@@ -601,7 +611,7 @@ class CoreShellParticle:
         return result
 
     def coulomb_screening_energy(self, relative_tolerance: float = 1e-5, shell_term_denominator: float = 2.0):
-        """ Calculates the Coulomb screening energy. Somewhat slow.
+        """Calculates the Coulomb screening energy. Somewhat slow.
 
         Parameters
         ----------
@@ -640,13 +650,28 @@ class CoreShellParticle:
         # Energy returned in units of eV.
         # r1 < R, r2 < R
         region_one = np.array(
-            dblquad(coulomb_integrand, 0, self.core_width, 0, self.core_width, epsabs=0.0, epsrel=relative_tolerance)
+            dblquad(
+                coulomb_integrand,
+                0,
+                self.core_width,
+                0,
+                self.core_width,
+                epsabs=0.0,
+                epsrel=relative_tolerance,
+            )
         )
 
         # r1 > R, r2 < R
 
         region_two = np.array(
-            dblquad(coulomb_integrand, self.core_width, self.radius, 0, self.core_width, epsrel=relative_tolerance)
+            dblquad(
+                coulomb_integrand,
+                self.core_width,
+                self.radius,
+                0,
+                self.core_width,
+                epsrel=relative_tolerance,
+            )
         )
 
         # r1 > R, r2 > R
@@ -730,7 +755,13 @@ class CoreShellParticle:
         # r1 < R, r2 < R
         integral_region_one = np.array(
             dblquad(
-                polarization_integrand, 0, self.core_width, 0, self.core_width, epsabs=0.0, epsrel=relative_tolerance
+                polarization_integrand,
+                0,
+                self.core_width,
+                0,
+                self.core_width,
+                epsabs=0.0,
+                epsrel=relative_tolerance,
             )
         )
 
@@ -796,7 +827,10 @@ class CoreShellParticle:
         return sectioned_integral
 
     def self_interaction_energy(
-        self, relative_tolerance: float = 1e-5, plot_integrand: bool = False, cmap: str = "coolwarm"
+        self,
+        relative_tolerance: float = 1e-5,
+        plot_integrand: bool = False,
+        cmap: str = "coolwarm",
     ):
         """
 
@@ -830,26 +864,45 @@ class CoreShellParticle:
             return r ** 2 * hdf(r) * self_interaction_operator(r)
 
         integrand_in_core_electron = quad(
-            electron_self_energy_integrand, 0, self.core_width, epsabs=0.0, epsrel=relative_tolerance
+            electron_self_energy_integrand,
+            0,
+            self.core_width,
+            epsabs=0.0,
+            epsrel=relative_tolerance,
         )
         integrand_in_shell_electron = quad(
-            electron_self_energy_integrand, self.core_width, self.radius, epsabs=0.0, epsrel=relative_tolerance
+            electron_self_energy_integrand,
+            self.core_width,
+            self.radius,
+            epsabs=0.0,
+            epsrel=relative_tolerance,
         )
 
         integrand_in_core_hole = quad(
-            hole_self_energy_integrand, 0, self.core_width, epsabs=0.0, epsrel=relative_tolerance
+            hole_self_energy_integrand,
+            0,
+            self.core_width,
+            epsabs=0.0,
+            epsrel=relative_tolerance,
         )
         integrand_in_shell_hole = quad(
-            hole_self_energy_integrand, self.core_width, self.radius, epsabs=0.0, epsrel=relative_tolerance
+            hole_self_energy_integrand,
+            self.core_width,
+            self.radius,
+            epsabs=0.0,
+            epsrel=relative_tolerance,
         )
         return (integrand_in_core_electron[0] + integrand_in_shell_electron[0]) * norm_e + (
             integrand_in_core_hole[0] + integrand_in_shell_hole[0]
         ) * norm_h
 
     def biexciton_coulomb_screening_energy(
-        self, relative_tolerance: float = 1e-5, plot_integrand: bool = False, cmap: str = "coolwarm"
+        self,
+        relative_tolerance: float = 1e-5,
+        plot_integrand: bool = False,
+        cmap: str = "coolwarm",
     ):
-        """ Calculates the Coulomb screening energy. Somewhat slow.
+        """Calculates the Coulomb screening energy. Somewhat slow.
 
         Parameters
         ----------
@@ -882,13 +935,28 @@ class CoreShellParticle:
         # Energy returned in units of eV.
         # r1 < R, r2 < R
         region_one = np.array(
-            dblquad(coulomb_integrand, 0, self.core_width, 0, self.core_width, epsabs=0.0, epsrel=relative_tolerance)
+            dblquad(
+                coulomb_integrand,
+                0,
+                self.core_width,
+                0,
+                self.core_width,
+                epsabs=0.0,
+                epsrel=relative_tolerance,
+            )
         )
 
         # r1 > R, r2 < R
 
         region_two = np.array(
-            dblquad(coulomb_integrand, self.core_width, self.radius, 0, self.core_width, epsrel=relative_tolerance)
+            dblquad(
+                coulomb_integrand,
+                self.core_width,
+                self.radius,
+                0,
+                self.core_width,
+                epsrel=relative_tolerance,
+            )
         )
 
         # r1 > R, r2 > R
@@ -925,8 +993,22 @@ class CoreShellParticle:
             max_core_sample = r[np.argwhere(r < self.core_width)[-1]]
             zz = coulomb_integrand(r1, r2)
             plt.imshow(zz, extent=[0, self.radius, self.radius, 0], cmap=cmap)
-            plt.hlines(max_core_sample, xmin=0, xmax=self.radius, linestyles="dotted", label="H-shell", linewidth=0.5)
-            plt.vlines(max_core_sample, ymin=0, ymax=self.radius, linestyles="dotted", label="V-core", linewidth=0.5)
+            plt.hlines(
+                max_core_sample,
+                xmin=0,
+                xmax=self.radius,
+                linestyles="dotted",
+                label="H-shell",
+                linewidth=0.5,
+            )
+            plt.vlines(
+                max_core_sample,
+                ymin=0,
+                ymax=self.radius,
+                linestyles="dotted",
+                label="V-core",
+                linewidth=0.5,
+            )
             plt.colorbar()
             plt.xlabel("Electron($r_a$) coordinate")
             plt.ylabel("Hole($r_b$) coordinate")
@@ -946,7 +1028,7 @@ class CoreShellParticle:
         return is_type_one, is_reverse_type_one
 
     def _is_type_two(self) -> (bool, bool, bool):
-        """"A type two QD has both conduction and valence band edges of its core either higher or lower than the
+        """ "A type two QD has both conduction and valence band edges of its core either higher or lower than the
         corresponding band edges of the shell.
 
         """
@@ -963,10 +1045,14 @@ class CoreShellParticle:
             k_e, q_e, k_h, q_h = self.calculate_wavenumbers()
             # print(k_h)
             electron_density_integral = quad(
-                lambda x: x * x * _densityfunction(x, k_e, q_e, self.core_width, self.shell_width), 0, self.radius
+                lambda x: x * x * _densityfunction(x, k_e, q_e, self.core_width, self.shell_width),
+                0,
+                self.radius,
             )[0]
             hole_density_integral = quad(
-                lambda x: x * x * _densityfunction(x, k_h, q_h, self.core_width, self.shell_width), 0, self.radius
+                lambda x: x * x * _densityfunction(x, k_h, q_h, self.core_width, self.shell_width),
+                0,
+                self.radius,
             )[0]
 
             self.norm_e = 1 / electron_density_integral

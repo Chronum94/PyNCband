@@ -4,14 +4,21 @@ from numba import jit, float64, complex128
 
 from typing import Callable, Union, TYPE_CHECKING, Tuple
 
-__all__ = ["e2k", "k2e", "eigenvalue_residual"]
+__all__ = [
+    "e2k",
+    "k2e",
+    "eigenvalue_residual",
+    "wavefunction",
+    "_core_wavefunction",
+    "_shell_wavefunction",
+]
 
 floatcomplex = Union[float, complex]
 floatarray = Union[float, np.ndarray]
 
 
 def e2k(e, m, potential_step):
-    """ Calculates wavenumber from energy.
+    """Calculates wavenumber from energy.
 
     Parameters
     ----------
@@ -33,7 +40,7 @@ def e2k(e, m, potential_step):
 
 
 def k2e(k, m, potential_step):
-    """ Calculates energy from wavenumber.
+    """Calculates energy from wavenumber.
 
     Parameters
     ----------
@@ -164,12 +171,14 @@ def _core_wavefunction(x: float, k: floatcomplex, core_radius: float) -> floatco
 
     # The branch is for numerical stability near x = 0.
     if abs(x) < 1e-8:
-        val = k / denom
+        val = (k / denom).real
     else:
         val = np.sin(k * x) / (x * denom)
-    return val
+    return val.real
+
 
 # core_wavefunction = np.vectorize(_unnormalized_core_wavefunction, otypes=(np.complex128,))
+
 
 @jit(nopython=True)
 def _shell_wavefunction(x: float, q: floatcomplex, core_radius: float, shell_thickness: float) -> floatcomplex:
@@ -205,15 +214,16 @@ def _shell_wavefunction(x: float, q: floatcomplex, core_radius: float, shell_thi
     Nano Letters, 7(1), 108–115. https://doi.org/10.1021/nl0622404
 
     """
-    # This doesn't need the numerical stability shenanigans because we aren't evaluating it at x = 0.
-    # But sin(q * shell_width) can still go to 0, technically. This may not happen because of how q is constrained.
-    # Needs testing.
-    return np.sin(q * (core_radius + shell_thickness - x)) / (x * np.sin(q * shell_thickness))
+    return (np.sin(q * (core_radius + shell_thickness - x)) / (x * np.sin(q * shell_thickness))).real
 
 
 @jit(nopython=True)
 def _wavefunction(
-    x: float, core_wavenumber: floatcomplex, shell_wavenumber: floatcomplex, core_radius: float, shell_thickness: float
+    x: float,
+    core_wavenumber: floatcomplex,
+    shell_wavenumber: floatcomplex,
+    core_radius: float,
+    shell_thickness: float,
 ) -> floatcomplex:
     """Evaluates the radially symmetric wavefunction values of the core-shell semiconductor nanocrystal at given point.
 
@@ -255,3 +265,84 @@ def _wavefunction(
         return _shell_wavefunction(x, shell_wavenumber, core_radius, shell_thickness)
     else:
         return 0
+
+
+wavefunction = np.vectorize(_wavefunction)
+
+@jit(nopython=True)
+def _densityfunction(
+    r: float,
+    core_wavenumber: floatcomplex,
+    shell_wavenumber: floatcomplex,
+    core_radius: float,
+    shell_thickness: float,
+) -> float:
+    """Returns the probability density from a wavefunction at a point in the core-shell.
+
+
+    Parameters
+    ----------
+    r : float, nanometers
+        The point at which to evaluate the probability density.
+
+    core_wavenumber : float, purely real or purely imaginary, 1 / nanometers
+        The wavenumber in the core of the core-shell quantum dot.
+
+    shell_wavenumber : float, purely real or purely imaginary, 1 / nanometers
+        The wavenumber in the shell of the core-shell quantum dot.
+
+    core_width : float, nanometers
+        The width of the core of the quantum dot.
+
+    shell_width : float, nanometers
+        The width of the shell of the quantum dot.
+    Returns
+    -------
+    val : float
+        The probabilty density of the partcle at that radial point in the core-shell semiconductor nanocrystal.
+
+    """
+    return abs(_wavefunction(r, core_wavenumber, shell_wavenumber, core_radius, shell_thickness)) ** 2
+
+
+def make_coulomb_screening_operator(
+    coreshellparticle: "CoreShellParticle", shell_term_denominator: float = 2
+) -> Callable:
+    """Creates a Coulomb interaction operator function for a particular function.
+
+    Currently, this assumes opposite charges on the two interacting particles. This will likely need to be changed once
+    biexcitons are considered.
+
+    Parameters
+    ----------
+    coreshellparticle : CoreShellParticle
+
+    Returns
+    -------
+    coulomb_screening_operator : Callable(r1, r2)
+        The Coulomb screening operator as a function of the two radial coordinates of the two excitons.
+
+    References
+    ----------
+    .. [1] Piryatinski, A., Ivanov, S. A., Tretiak, S., & Klimov, V. I. (2007). Effect of Quantum and Dielectric \
+    Confinement on the Exciton−Exciton Interaction Energy in Type II Core/Shell Semiconductor Nanocrystals. \
+    Nano Letters, 7(1), 108–115. https://doi.org/10.1021/nl0622404
+
+    """
+
+    # Stripping these variables of the coreshellparticle so Numba can use them.
+    core_width = coreshellparticle.core_width
+    core_eps, shell_eps = (coreshellparticle.cmat.eps, coreshellparticle.smat.eps)
+
+    @jit([float64(float64, float64)], nopython=True)
+    def coulomb_screening_operator(r_a: float, r_b: float) -> float:
+        rmax = max(r_a, r_b)
+        r_c = core_width
+        taz = 1.0  # Theta at zero, theta being step function.
+
+        # The two step functions that are used to calculate the charge regions in the Coulomb interaction operator.
+        step1, step2 = (_heaviside(r_c - r_a, taz), _heaviside(r_c - r_b, taz))
+        val = -step1 * step2 / (rmax * core_eps) - (1 - step1 + 1 - step2) / (shell_term_denominator * rmax * shell_eps)
+        return val * e / n_ * 1 / (4.0 * np.pi * eps0)  # Scaling to eV.
+
+    return coulomb_screening_operator

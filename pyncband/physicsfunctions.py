@@ -182,7 +182,11 @@ unnormalized_shell_wavefunction = np.vectorize(_unnormalized_shell_wavefunction,
 
 @jit(nopython=True)
 def _wavefunction(
-    x: float, core_wavenumber: floatcomplex, shell_wavenumber: floatcomplex, core_width: float, shell_width: float
+    x: float,
+    core_wavenumber: floatcomplex,
+    shell_wavenumber: floatcomplex,
+    core_width: float,
+    shell_width: float,
 ) -> floatcomplex:
     """Evaluates the radially symmetric wavefunction values of the core-shell semiconductor nanocrystal at given point.
 
@@ -232,7 +236,11 @@ wavefunction = np.vectorize(_wavefunction, otypes=(np.complex128,))
 
 @jit(nopython=True)
 def _densityfunction(
-    r: float, core_wavenumber: floatcomplex, shell_wavenumber: floatcomplex, core_width: float, shell_width: float
+    r: float,
+    core_wavenumber: floatcomplex,
+    shell_wavenumber: floatcomplex,
+    core_width: float,
+    shell_width: float,
 ) -> float:
     """Returns the probability density from a wavefunction at a point in the core-shell.
 
@@ -264,7 +272,7 @@ def _densityfunction(
 
 # @jit(nopython = True) # Jitting this requires type info for csqrt. need to figure that out.
 def wavenumber_from_energy(energy: float, mass: float, potential_offset: float = 0) -> floatcomplex:
-    """ Calculates wavenumber from energy.
+    """Calculates wavenumber from energy.
 
     Parameters
     ----------
@@ -473,7 +481,9 @@ def make_coulomb_screening_operator(
     return coulomb_screening_operator
 
 
-def make_interface_polarization_operator(coreshellparticle: "CoreShellParticle") -> Callable:
+def make_interface_polarization_operator(
+    coreshellparticle: "CoreShellParticle",
+) -> Callable:
     """Generates the interface polarization operator from the CoreShellParticle inforamtion.
 
     Parameters
