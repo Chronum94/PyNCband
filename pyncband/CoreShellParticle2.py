@@ -109,7 +109,7 @@ class CoreShellParticle2:
         )
 
         if coulomb_interaction:
-            coulomb_energy = self._calculate_coulomb_energy(core_radius, shell_thickness)
+            coulomb_energy = self._calculate_coulomb_energy(core_radius, shell_thickness, electron_core_wavenumber, electron_shell_wavenumber, hole_core_wavenumber, hole_shell_wavenumber)
         if polarization_interaction:
             polarization_energy = self._calculate_polarization_energy(core_radius, shell_thickness)
 
@@ -349,8 +349,7 @@ class CoreShellParticle2:
 
         return 1 / density_integral
 
-    def _calculate_coulomb_energy(self, core_radius, shell_thickness):
-    def coulomb_screening_energy(self, relative_tolerance: float = 1e-5, shell_term_denominator: float = 2.0):
+    def _calculate_coulomb_energy(self, core_radius, shell_thickness, electron_core_wavenumber, electron_shell_wavenumber, hole_core_wavenumber, hole_shell_wavenumber):
         """Calculates the Coulomb screening energy. Somewhat slow.
 
         Parameters
@@ -372,18 +371,23 @@ class CoreShellParticle2:
         2-array of floats: The Coulomb screening energy and error.
 
         """
-        coulomb_screening_operator = make_coulomb_screening_operator(
-            self, shell_term_denominator=shell_term_denominator
-        )
-        k_e, q_e, k_h, q_h = self.calculate_wavenumbers()
-        norm_e, norm_h = self._normalization()
+        # @jit([float64(float64, float64)], nopython=True)
+        def coulomb_screening_operator(r_a: float, r_b: float) -> float:
+            if r_a > core_radius and r_b < core_radius:
+                return 1 / (self.cmat.eps * max(r_a, r_b))
+            prefactor = 0
+            if r_a >= core_radius:
+                prefactor += 1
+            if r_b >= core_radius:
+                prefactor += 1
+            return prefactor / (2 * self.smat.eps * max(r_a, r_b))
 
         # Electron/hole density functions.
         def edf(x):
-            return _densityfunction(x, k_e, q_e, self.core_width, self.shell_width)
+            return _densityfunction(x, electron_core_wavenumber, electron_shell_wavenumber, core_radius, shell_thickness)
 
         def hdf(x):
-            return _densityfunction(x, k_h, q_h, self.core_width, self.shell_width)
+            return _densityfunction(x, hole_core_wavenumber, hole_shell_wavenumber, core_radius, shell_thickness)
 
         coulomb_integrand = lambda r1, r2: r1 ** 2 * r2 ** 2 * edf(r1) * hdf(r2) * coulomb_screening_operator(r1,
                                                                                                               r2)
@@ -394,9 +398,9 @@ class CoreShellParticle2:
             dblquad(
                 coulomb_integrand,
                 0,
-                self.core_width,
+                core_radius,
                 0,
-                self.core_width,
+                core_radius,
                 epsabs=0.0,
                 epsrel=relative_tolerance,
             )
@@ -407,10 +411,11 @@ class CoreShellParticle2:
         region_two = np.array(
             dblquad(
                 coulomb_integrand,
-                self.core_width,
-                self.radius,
+                core_radius,
+                core_radius + shell_thickness,
                 0,
-                self.core_width,
+                core_radius,
+                core_radius,
                 epsrel=relative_tolerance,
             )
         )
@@ -419,10 +424,10 @@ class CoreShellParticle2:
         region_three = np.array(
             dblquad(
                 coulomb_integrand,
-                self.core_width,
-                self.radius,
-                self.core_width,
-                self.radius,
+                core_radius,
+                core_radius + shell_thickness,
+                core_radius,
+                core_radius + shell_thickness,
                 epsabs=0.0,
                 epsrel=relative_tolerance,
             )
@@ -433,15 +438,15 @@ class CoreShellParticle2:
             dblquad(
                 coulomb_integrand,
                 0,
-                self.core_width,
-                self.core_width,
-                self.radius,
+                core_radius,
+                core_radius,
+                core_radius + shell_thickness,
                 epsabs=0.0,
                 epsrel=relative_tolerance,
             )
         )
-        sectioned_integral = (region_one + region_two + region_three + region_four) * norm_h * norm_e
-    pass
+        sectioned_integral = (region_one + region_two + region_three + region_four) * self.hole_wfn_norm * self.electron_wfn_norm
+        return sectioned_integral
 
 
 def get_type(self, detailed: bool = False) -> str:
